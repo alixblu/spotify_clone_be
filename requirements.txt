@@ -23,7 +23,3 @@ flake8>=6.0.0
 # Optional: Production environment
 gunicorn>=20.1.0
 
-# React and Vite
-# react==18.2.0
-# vite==4.3.4
-# @vitejs/plugin-react==4.3.4

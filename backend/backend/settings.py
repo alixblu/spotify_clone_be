@@ -25,12 +25,14 @@ SECRET_KEY = 'django-insecure-zbb^@6$^lq^or+@*gj0&xr-w*1(yqzwuzhis3&gc8)-3824@2@
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'corsheaders',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -38,7 +40,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'corsheaders',
     'djongo',
     'spotify_app',
 ]
@@ -55,6 +56,9 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+CORS_ALLOWED_ORIGINS = [
+    "http://127.0.0.1:5173",  # Frontend URL
+]
 ROOT_URLCONF = 'backend.urls'
 
 TEMPLATES = [
@@ -105,7 +109,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
+SECURE_SSL_REDIRECT = False
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
@@ -130,12 +134,74 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 import os
 from dotenv import load_dotenv
-
+import base64
+import requests
 load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 DEBUG = os.getenv("DEBUG") == "True"
 DATABASE_URL = os.getenv("DATABASE_URL")
-CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
-CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
+SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
+SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
+SPOTIFY_REDIRECT_URI = os.getenv("REDIRECT_URI")
+SCOPE = "user-read-private user-read-email"
 
+# def get_token():
+#     auth_string = CLIENT_ID + ":" + CLIENT_SECRET
+#     auth_bytes = auth_string.encode('utf-8')
+#     auth_base64 = base64.b64encode(auth_bytes).decode('utf-8')
+#     url = 'http://accounts.spotify.com/api/token'
+#     headers = {
+#         'Authorization': 'Basic ' + auth_base64,
+#         'Content-Type': 'application/x-www-form-urlencoded'
+#     }
+#     data = {
+#         'grant_type': 'client_credentials'
+#     }
+#     response = requests.post('http://accounts.spotify.com/api/token', headers=headers, data=data)
+#     json_result = response.json()
+#     access_token = json_result['access_token']
+#     return access_token
+
+# def get_auth_header(access_token):
+#     return {"Authorization": "Bearer " + access_token}
+
+# def search_for_artist(artist_name):
+#     access_token = get_token()
+#     headers = get_auth_header(access_token)
+#     url = 'https://api.spotify.com/v1/search'
+#     params = {
+#         'q': artist_name,
+#         'type': 'artist',
+#         'limit': 1
+#     }
+#     response = requests.get(url, headers=headers, params=params)
+#     json_result = response.json()
+#     if json_result['artists']['items']:
+#         print("Artist found")
+#         artist = json_result['artists']['items'][0]
+#         print(artist['name'])
+#         return json_result['artists']['items'][0]
+#     else:
+#         print("No artist found")
+#         return None
+
+# def get_songs_by_artist(artist_id):
+#     access_token = get_token()
+#     headers = get_auth_header(access_token)
+#     url = f'https://api.spotify.com/v1/artists/{artist_id}/top-tracks'
+#     params = {
+#         'market': 'US'
+#     }
+#     response = requests.get(url, headers=headers, params=params)
+#     json_result = response.json()
+#     if json_result['tracks']:
+#         tracks = json_result['tracks']
+#         for track in tracks:
+#             print(track['name'])
+#         return json_result['tracks']
+#     else:
+#         print("No songs found")
+#         return None
+
+# get_songs_by_artist(search_for_artist("Taylor Swift")['id'])

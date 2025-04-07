@@ -23,24 +23,24 @@ Before starting, make sure you have the following installed:
 ## Installation and Setup
 
 ### Step 1: Clone the Repository
-git clone https://github.com/alixblu/spotify_clone_backend.git
-cd spotify_clone_backend
+- git clone https://github.com/alixblu/spotify_clone_backend.git
+- cd spotify_clone_backend
 ### Step 2: Create a Virtual Environment
-Set up a virtual environment to manage dependencies:
-python3 -m venv spotify_envi
+- Set up a virtual environment to manage dependencies:
+- python3 -m venv spotify_envi
 source spotify_envi/bin/activate
 
 ### Step 3: Install Required Dependencies
-pip install -r requirements.txt
+- pip install -r requirements.txt
 
 ### Step 4: Set Up MongoDB
-sudo apt update
-sudo apt install mongodb
-sudo systemctl start mongodb
+- sudo apt update
+- sudo apt install mongodb
+- sudo systemctl start mongodb
 
 ### Step 5: Configure the Database in Django
-Update the settings.py file to use MongoDB
-DATABASES = {
+- Update the settings.py file to use MongoDB
+- DATABASES = {
     'default': {
         'ENGINE': 'djongo',
         'NAME': 'spotify_clone_db',
@@ -49,8 +49,8 @@ DATABASES = {
 
 ## Running the Project
 
-### Step 1: Start the Django Development Server
-python manage.py makemigrations
-python manage.py migrate
-python manage.py runserver
+### Start the Django Development Server
+- python manage.py makemigrations
+- python manage.py migrate
+- python manage.py runserver
 ```bash

@@ -1,1 +1,32 @@
+# Python files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+env/
+spotify_envi/
+
+# Django files
+db.sqlite3
+*.log
+/static/
+*.pot
+*.mo
+/media/
+
+# Environment variables
 .env
+
+# Editor and OS-specific files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Build and dependency files
+*.lock
+*.whl
+pip-log.txt
