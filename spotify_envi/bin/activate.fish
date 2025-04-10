@@ -33,7 +33,7 @@ end
 # Unset irrelevant variables.
 deactivate nondestructive
 
-set -gx VIRTUAL_ENV /home/alixblu/MongoDB_test/Spotify/spotify_envi
+set -gx VIRTUAL_ENV /home/alixblu/project/Spotify/spotify_envi
 
 set -gx _OLD_VIRTUAL_PATH $PATH
 set -gx PATH "$VIRTUAL_ENV/"bin $PATH
