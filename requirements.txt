@@ -23,3 +23,5 @@ flake8>=6.0.0
 # Optional: Production environment
 gunicorn>=20.1.0
 
+spotipy
+requests

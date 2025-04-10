@@ -15,7 +15,8 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
+import sys
+sys.path.append('/home/alixblu/project/Spotify/backend')
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
@@ -42,6 +43,9 @@ INSTALLED_APPS = [
     'rest_framework',
     'djongo',
     'spotify_app',
+    'user_management',
+    'spotify_api',
+    'music_library',
 ]
 
 
@@ -57,8 +61,9 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
-    "http://127.0.0.1:5173",  # Frontend URL
+    "http://127.0.0.1:5173",
 ]
+# CORS_ALLOW_ALL_ORIGINS = True
 ROOT_URLCONF = 'backend.urls'
 
 TEMPLATES = [
@@ -134,8 +139,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 import os
 from dotenv import load_dotenv
-import base64
-import requests
+
 load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
@@ -145,12 +149,11 @@ SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 SPOTIFY_REDIRECT_URI = os.getenv("REDIRECT_URI")
 SCOPE = "user-read-private user-read-email"
-
 # def get_token():
-#     auth_string = CLIENT_ID + ":" + CLIENT_SECRET
+#     auth_string = SPOTIFY_CLIENT_ID + ":" + SPOTIFY_CLIENT_SECRET
 #     auth_bytes = auth_string.encode('utf-8')
 #     auth_base64 = base64.b64encode(auth_bytes).decode('utf-8')
-#     url = 'http://accounts.spotify.com/api/token'
+#     url = 'https://accounts.spotify.com/api/token'  # Corrected to HTTPS
 #     headers = {
 #         'Authorization': 'Basic ' + auth_base64,
 #         'Content-Type': 'application/x-www-form-urlencoded'
@@ -158,11 +161,22 @@ SCOPE = "user-read-private user-read-email"
 #     data = {
 #         'grant_type': 'client_credentials'
 #     }
-#     response = requests.post('http://accounts.spotify.com/api/token', headers=headers, data=data)
-#     json_result = response.json()
+#     response = requests.post(url, headers=headers, data=data)
+
+#     print(f"Status Code: {response.status_code}")
+#     print(f"Response Text: {response.text}")
+
+#     try:
+#         json_result = response.json()
+#     except ValueError:
+#         raise Exception(f"Failed to parse JSON. Response text: {response.text}")
+
+#     if 'access_token' not in json_result:
+#         raise Exception(f"Access token not found in response. Response: {json_result}")
+
 #     access_token = json_result['access_token']
 #     return access_token
-
+# print(f"Access Token: {get_token()}")
 # def get_auth_header(access_token):
 #     return {"Authorization": "Bearer " + access_token}
 
@@ -176,15 +190,24 @@ SCOPE = "user-read-private user-read-email"
 #         'limit': 1
 #     }
 #     response = requests.get(url, headers=headers, params=params)
-#     json_result = response.json()
-#     if json_result['artists']['items']:
+
+#     print(f"Status Code: {response.status_code}")
+#     print(f"Response Text: {response.text}")
+
+#     try:
+#         json_result = response.json()
+#     except ValueError:
+#         raise Exception(f"Failed to parse JSON. Response text: {response.text}")
+
+#     if 'artists' in json_result and json_result['artists']['items']:
 #         print("Artist found")
 #         artist = json_result['artists']['items'][0]
 #         print(artist['name'])
-#         return json_result['artists']['items'][0]
+#         return artist
 #     else:
 #         print("No artist found")
 #         return None
+# search_for_artist("Taylor Swift")
 
 # def get_songs_by_artist(artist_id):
 #     access_token = get_token()
@@ -204,4 +227,3 @@ SCOPE = "user-read-private user-read-email"
 #         print("No songs found")
 #         return None
 
-# get_songs_by_artist(search_for_artist("Taylor Swift")['id'])

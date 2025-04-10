@@ -19,5 +19,9 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('spotify/api/', include('spotify_app.urls')),
+    # path('user_management/', include('user_management.urls')),
+    # path('music_library/', include('music_library.urls')),
+    path('spotify_api/', include('spotify_api.urls')),
+    path('spotify_app/', include('spotify_app.urls')),
+
 ]
