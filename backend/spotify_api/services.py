@@ -21,17 +21,5 @@ def get_spotify_access_token():
     else:
         raise Exception("Failed to fetch access token")
 
-def get_most_played_albums():
-    """Fetch most-played albums from Spotify."""
-    access_token = get_spotify_access_token()
-    url = "https://api.spotify.com/v1/browse/new-releases"
-    headers = {"Authorization": f"Bearer {access_token}"}
-    response = requests.get(url, headers=headers)
-    return response.json()  # Return raw API data
 
-def get_playlists():
-    """Fetch user's playlists from Spotify."""
-    access_token = get_spotify_access_token()
-    headers = {"Authorization": f"Bearer {access_token}"}
-    response = requests.get("https://api.spotify.com/v1/me/playlists", headers=headers)
-    return response.json()
+
