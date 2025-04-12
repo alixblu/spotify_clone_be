@@ -1,22 +1,17 @@
 from django.db import models
-
-# Create your models here.
-from datetime import datetime, timedelta
-from django.db import models
+from datetime import datetime
 
 class User(models.Model):
-    username = models.CharField(max_length=100)
+    name = models.CharField(max_length=255)
+    birthday = models.DateField(null=True, blank=True)
+    gender = models.CharField(max_length=50, null=True, blank=True)
     email = models.EmailField(unique=True)
-    password = models.CharField(max_length=100)
-    role = models.CharField(max_length=10, default='user')  # 'admin' or 'user'
-    is_premium = models.BooleanField(default=False)
-    premium_expires_at = models.DateTimeField(null=True, blank=True)
+    password = models.CharField(max_length=255)
+    role = models.CharField(max_length=50, null=True, blank=True)
+    profile_pic = models.URLField(null=True, blank=True)
+    update_at = models.DateTimeField(auto_now=True)  # Automatically updates on save
+    premium_expired_at = models.DateTimeField(null=True, blank=True)
+    isHidden = models.BooleanField(default=False)
 
-    def activate_premium(self):
-        current_time = datetime.now()
-        if self.premium_expires_at and current_time < self.premium_expires_at:
-            return False  # Premium already active
-        self.is_premium = True
-        self.premium_expires_at = current_time + timedelta(hours=24)
-        self.save()
-        return True
+    def __str__(self):
+        return self.name

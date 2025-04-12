@@ -14,11 +14,18 @@ def custom_login(request):
         email = body.get("email")
         password = body.get("password")
 
+        # Fetch user from database
         user = db.users.find_one({"email": email})
 
         if user:
             if user["password"] == password:
-                return JsonResponse({"success": True})
+                # Return success along with _id, email, and role
+                return JsonResponse({
+                    "success": True,
+                    "_id": str(user["_id"]),  # Convert ObjectId to string
+                    "email": user["email"],
+                    "role": user["role"],
+                })
             else:
                 return JsonResponse({"success": False, "error": "Invalid credentials"})
         else:
@@ -31,7 +38,8 @@ def custom_register(request):
         body = json.loads(request.body)
         email = body.get("email")
         password = body.get("password")
-
+        name = body.get("name")
+        dob = body.get("dob")
         # Check if the user already exists
         user = db.users.find_one({"email": email})
         if user:

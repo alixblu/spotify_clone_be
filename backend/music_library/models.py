@@ -1,15 +1,36 @@
-from django.db import models
+from djongo import models
 
 # Create your models here.
-from django.db import models
+from djongo import models
 
-class Song(models.Model):
-    song_name = models.CharField(max_length=255)
-    artist = models.CharField(max_length=255)
-    album_name = models.CharField(max_length=255)
-    file_path = models.CharField(max_length=255, null=True, blank=True)
+# covert str to ObjectId when get data from DB and vice versa
+class ArtistPerform(models.Model):
+    artist_id = models.CharField(max_length=255, null=False)
+    song_id = models.CharField(max_length=255, null=False)
 
-class Album(models.Model):
-    album_name = models.CharField(max_length=255)
-    created_by = models.ForeignKey('user_management.User', on_delete=models.CASCADE)
-    songs = models.ManyToManyField(Song)
+    def __str__(self):
+        return f"Artist{self.artist_id} Performs {self.song_id}"
+    
+
+class FavoriteSong(models.Model):
+    user_id = models.CharField(max_length=255, null=False)
+    song_id = models.CharField(max_length=255, null=False)
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Favorite Song added at {self.added_at}"
+    
+class FavoriteAlbum(models.Model):
+    added_at = models.DateTimeField(auto_now_add=True)
+    user_id = models.CharField(max_length=255, null=False)
+    album_id = models.CharField(max_length=255, null=False)
+    def __str__(self):
+        return f"Favorite Album added at {self.added_at}"
+    
+class FavoritePlaylist(models.Model):
+    added_at = models.DateTimeField(auto_now_add=True)
+    user_id = models.CharField(max_length=255, null=False)
+    playlist_id = models.CharField(max_length=255, null=False)
+    def __str__(self):
+        return f"Favorite Playlist added at {self.added_at}"
+    

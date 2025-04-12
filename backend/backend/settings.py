@@ -91,10 +91,12 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'djongo',
-        'NAME': 'spotify',
+        'NAME': 'spotify_database',  # Replace with your MongoDB database name
+        'HOST': 'localhost',         # MongoDB server address
+        'PORT': 27017,               # Default MongoDB port
+        'ENFORCE_SCHEMA': False,       # Set to False if you don't want to enforce schema
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators

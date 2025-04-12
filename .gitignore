@@ -10,6 +10,8 @@ db.sqlite3
 # Environment variables
 .env
 
+.spotify_envi/
+
 # Editor and OS-specific files
 .idea/
 .vscode/
