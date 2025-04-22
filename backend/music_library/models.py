@@ -1,36 +1,67 @@
 from djongo import models
 
-# Create your models here.
-from djongo import models
+from spotify_app.models import Playlist, Song, Artist, Album
+from user_management.models import User
 
-# covert str to ObjectId when get data from DB and vice versa
+class PlaylistSong(models.Model):
+    playlist_id = models.ForeignKey(Playlist, on_delete=models.CASCADE)
+    song_id = models.ForeignKey(Song, on_delete=models.CASCADE)
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('playlist_id', 'song_id')
+
+
 class ArtistPerform(models.Model):
-    artist_id = models.CharField(max_length=255, null=False)
-    song_id = models.CharField(max_length=255, null=False)
+    artist_id = models.ForeignKey(Artist, on_delete=models.CASCADE)
+    song_id = models.ForeignKey(Song, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ('artist_id', 'song_id')
 
     def __str__(self):
-        return f"Artist{self.artist_id} Performs {self.song_id}"
-    
+        return f"Artist {self.artist_id} performed Song {self.song_id}"
 
 class FavoriteSong(models.Model):
-    user_id = models.CharField(max_length=255, null=False)
-    song_id = models.CharField(max_length=255, null=False)
+    user_id = models.ForeignKey(User, on_delete=models.CASCADE)
+    song_id = models.ForeignKey(Song, on_delete=models.CASCADE)
     added_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        unique_together = ('user_id', 'song_id')
+
     def __str__(self):
-        return f"Favorite Song added at {self.added_at}"
+        return f"User {self.user_id} favorited Song {self.song_id}"
     
 class FavoriteAlbum(models.Model):
+    user_id = models.ForeignKey(User, on_delete=models.CASCADE)
+    album_id = models.ForeignKey(Album, on_delete=models.CASCADE)
     added_at = models.DateTimeField(auto_now_add=True)
-    user_id = models.CharField(max_length=255, null=False)
-    album_id = models.CharField(max_length=255, null=False)
+
+    class Meta:
+        unique_together = ('user_id', 'album_id')
+
     def __str__(self):
-        return f"Favorite Album added at {self.added_at}"
+        return f"User {self.user_id} favorited Album {self.album_id}"
     
 class FavoritePlaylist(models.Model):
+    user_id = models.ForeignKey(User, on_delete=models.CASCADE)
+    playlist_id = models.ForeignKey(Playlist, on_delete=models.CASCADE)
     added_at = models.DateTimeField(auto_now_add=True)
-    user_id = models.CharField(max_length=255, null=False)
-    playlist_id = models.CharField(max_length=255, null=False)
+
+    class Meta:
+        unique_together = ('user_id', 'playlist_id')
+
     def __str__(self):
-        return f"Favorite Playlist added at {self.added_at}"
-    
+        return f"User {self.user_id} favorited Playlist {self.playlist_id}"
+
+
+# class PlaylistSongHistory(models.Model):
+#     playlist_id = models.ForeignKey(Playlist, on_delete=models.CASCADE)
+#     song_id = models.ForeignKey(Song, on_delete=models.CASCADE)
+#     added_at = models.DateTimeField(auto_now_add=True)
+#     removed_at = models.DateTimeField(null=True, blank=True)
+
+#     class Meta:
+#         unique_together = ('playlist_id', 'song_id')
+#         ordering = ['-added_at']
