@@ -6,6 +6,70 @@ from datetime import datetime
 from .database import db
 from django.views.decorators.csrf import csrf_exempt
 
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
+from .models import Song
+from .serializers import SongSerializer
+
+@api_view(['POST'])
+def create_song(request, parser_classes=[MultiPartParser, FormParser]):
+    audio_blob = request.FILES.get('audio_file').read() if 'audio_file' in request.FILES else None
+    video_blob = request.FILES.get('video_file').read() if 'video_file' in request.FILES else None
+    
+    song_data = {
+        'title': request.data.get('title'),
+        'duration': request.data.get('duration'),
+        'audio_file': audio_blob,
+        'video_file': video_blob,
+        'img': request.data.get('img'),
+        'album_id': request.data.get('album_id'),
+        'isfromDB': True,
+    }
+
+    serializer = SongSerializer(data=song_data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({"message": "Song uploaded successfully!", "data": serializer.data}, status=201)
+    
+    return Response(serializer.errors, status=400)
+
+@api_view(['GET'])
+def list_songs(request):
+    songs = Song.objects.all()
+    serializer = SongSerializer(songs, many=True)
+    return Response(serializer.data)
+
+@api_view(['GET'])
+def get_song(request, song_id):
+    try:
+        song = Song.objects.get(_id=song_id)
+        serializer = SongSerializer(song)
+        return Response(serializer.data)
+    except Song.DoesNotExist:
+        return Response({"error": "Song not found"}, status=404)
+    
+@api_view(['PUT'])
+def update_song(request, song_id):
+    try:
+        song = Song.objects.get(_id=song_id)
+        serializer = SongSerializer(song, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Song updated!", "data": serializer.data})
+        return Response(serializer.errors, status=400)
+    except Song.DoesNotExist:
+        return Response({"error": "Song not found"}, status=404)
+    
+@api_view(['DELETE'])
+def delete_song(request, song_id):
+    try:
+        song = Song.objects.get(_id=song_id)
+        song.delete()
+        return Response({"message": "Song deleted successfully!"})
+    except Song.DoesNotExist:
+        return Response({"error": "Song not found"}, status=404)
+    
 
 @csrf_exempt
 def custom_login(request):
