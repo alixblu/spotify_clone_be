@@ -36,18 +36,27 @@ def get_audio_duration(audio_file):
 @api_view(['POST'])
 @parser_classes([MultiPartParser, FormParser])
 def upload_song(request):
+    # print(f"DEBUG: Received request data - {request.data}")
+    # print(f"DEBUG: Received files - {request.FILES}")
+
     audio_blob = request.FILES.get('audio_file')
     video_blob = request.FILES.get('video_file')
 
+    # print(f"DEBUG: audio_file received - {audio_blob}")
+    # print(f"DEBUG: video_file received - {video_blob}")
+
+    if not audio_blob or not video_blob:
+        return Response({"error": "No audio or video file received"}, status=400)
+
+    # Process duration
     audio_duration = get_audio_duration(audio_blob) if audio_blob else None
-    # video_duration = get_video_duration(video_blob) if video_blob else None
     song_duration = format_duration(audio_duration)
 
     song_data = {
         'title': request.data.get('title'),
-        'duration': song_duration,  # Automatically filled
-        'audio_file': audio_blob.read() if audio_blob else None,
-        'video_file': video_blob.read() if video_blob else None,
+        'duration': song_duration,
+        'audio_file': audio_blob,
+        'video_file': video_blob,
         'img': request.data.get('img', None),
         'album_id': request.data.get('album_id', None),
     }
@@ -57,6 +66,7 @@ def upload_song(request):
         serializer.save()
         return Response({"message": "Song uploaded successfully!", "data": serializer.data}, status=201)
     
+    print(f"DEBUG: Validation Errors - {serializer.errors}")
     return Response(serializer.errors, status=400)
 
 
