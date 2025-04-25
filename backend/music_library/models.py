@@ -10,6 +10,7 @@ class PlaylistSong(models.Model):
 
     class Meta:
         unique_together = ('playlist_id', 'song_id')
+        db_table = "playlist_songs"
 
 
 class ArtistPerform(models.Model):
@@ -18,6 +19,7 @@ class ArtistPerform(models.Model):
 
     class Meta:
         unique_together = ('artist_id', 'song_id')
+        db_table = "artist_performances"
 
     def __str__(self):
         return f"Artist {self.artist_id} performed Song {self.song_id}"
@@ -29,6 +31,7 @@ class FavoriteSong(models.Model):
 
     class Meta:
         unique_together = ('user_id', 'song_id')
+        db_table = "favorite_songs"
 
     def __str__(self):
         return f"User {self.user_id} favorited Song {self.song_id}"
@@ -40,6 +43,7 @@ class FavoriteAlbum(models.Model):
 
     class Meta:
         unique_together = ('user_id', 'album_id')
+        db_table = "favorite_albums"
 
     def __str__(self):
         return f"User {self.user_id} favorited Album {self.album_id}"
@@ -51,6 +55,7 @@ class FavoritePlaylist(models.Model):
 
     class Meta:
         unique_together = ('user_id', 'playlist_id')
+        db_table = "favorite_playlists"
 
     def __str__(self):
         return f"User {self.user_id} favorited Playlist {self.playlist_id}"

@@ -1,0 +1,4 @@
+admin@example.com
+12345
+
+api testing: https://.postman.co/workspace/My-Workspace~d8c89a0a-525f-4177-8f96-2c1fac499e41/request/42669144-6413d787-01a9-4edb-adf9-dc303100775f?action=share&creator=42669144&ctx=documentation&active-environment=42669144-bde1316b-f081-4e92-a990-2cfa15199996

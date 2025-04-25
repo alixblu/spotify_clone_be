@@ -1,30 +1,55 @@
 # Create your views here.
 ##########
-from django.http import JsonResponse
-import json
-from datetime import datetime
-from .database import db
-from django.views.decorators.csrf import csrf_exempt
 
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, parser_classes
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from .models import Song
 from .serializers import SongSerializer
+from mutagen.mp3 import MP3
+from django.core.files.storage import default_storage
+
+import os
+import datetime
+
+def format_duration(seconds):
+    if seconds:
+        return str(datetime.timedelta(seconds=seconds))  # Converts to hh:mm:ss
+    return "00:00:00"
+
+
+def get_audio_duration(audio_file):
+    if not audio_file:
+        return None
+    
+    temp_filename = "temp_audio.mp3"  # Explicit filename
+    temp_file_path = os.path.join(default_storage.location, temp_filename)
+
+    # Save file correctly before trying to read it
+    with default_storage.open(temp_filename, 'wb') as temp_file:
+        temp_file.write(audio_file.read())
+
+    audio = MP3(temp_file_path)  # Load file correctly now that it exists
+    return round(audio.info.length)  # Return duration in seconds safely
+
 
 @api_view(['POST'])
-def create_song(request, parser_classes=[MultiPartParser, FormParser]):
-    audio_blob = request.FILES.get('audio_file').read() if 'audio_file' in request.FILES else None
-    video_blob = request.FILES.get('video_file').read() if 'video_file' in request.FILES else None
-    
+@parser_classes([MultiPartParser, FormParser])
+def upload_song(request):
+    audio_blob = request.FILES.get('audio_file')
+    video_blob = request.FILES.get('video_file')
+
+    audio_duration = get_audio_duration(audio_blob) if audio_blob else None
+    # video_duration = get_video_duration(video_blob) if video_blob else None
+    song_duration = format_duration(audio_duration)
+
     song_data = {
         'title': request.data.get('title'),
-        'duration': request.data.get('duration'),
-        'audio_file': audio_blob,
-        'video_file': video_blob,
-        'img': request.data.get('img'),
-        'album_id': request.data.get('album_id'),
-        'isfromDB': True,
+        'duration': song_duration,  # Automatically filled
+        'audio_file': audio_blob.read() if audio_blob else None,
+        'video_file': video_blob.read() if video_blob else None,
+        'img': request.data.get('img', None),
+        'album_id': request.data.get('album_id', None),
     }
 
     serializer = SongSerializer(data=song_data)
@@ -33,6 +58,7 @@ def create_song(request, parser_classes=[MultiPartParser, FormParser]):
         return Response({"message": "Song uploaded successfully!", "data": serializer.data}, status=201)
     
     return Response(serializer.errors, status=400)
+
 
 @api_view(['GET'])
 def list_songs(request):
@@ -71,45 +97,3 @@ def delete_song(request, song_id):
         return Response({"error": "Song not found"}, status=404)
     
 
-@csrf_exempt
-def custom_login(request):
-    if request.method == "POST":
-        body = json.loads(request.body)
-        email = body.get("email")
-        password = body.get("password")
-
-        # Fetch user from database
-        user = db.users.find_one({"email": email})
-
-        if user:
-            if user["password"] == password:
-                # Return success along with _id, email, and role
-                return JsonResponse({
-                    "success": True,
-                    "_id": str(user["_id"]),  # Convert ObjectId to string
-                    "email": user["email"],
-                    "role": user["role"],
-                })
-            else:
-                return JsonResponse({"success": False, "error": "Invalid credentials"})
-        else:
-            return JsonResponse({"success": False, "error": "User not found"})
-    return JsonResponse({"error": "Invalid request method"}, status=405)
-
-@csrf_exempt
-def custom_register(request):
-    if request.method == "POST":
-        body = json.loads(request.body)
-        email = body.get("email")
-        password = body.get("password")
-        name = body.get("name")
-        dob = body.get("dob")
-        # Check if the user already exists
-        user = db.users.find_one({"email": email})
-        if user:
-            return JsonResponse({"success": False, "error": "User already exists"})
-        
-        # Add new user to database
-        db.users.insert_one({"email": email, "password": password, "created_at": datetime.now()})
-        return JsonResponse({"success": True})
-    return JsonResponse({"error": "Invalid request method"}, status=405)
