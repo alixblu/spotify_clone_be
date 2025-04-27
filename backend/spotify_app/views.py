@@ -7,31 +7,23 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from .models import Song
 from .serializers import SongSerializer
 from mutagen.mp3 import MP3
-from django.core.files.storage import default_storage
-
-import os
+from bson import ObjectId
+from django.core.exceptions import ValidationError
 import datetime
+from io import BytesIO
 
 def format_duration(seconds):
     if seconds:
         return str(datetime.timedelta(seconds=seconds))  # Converts to hh:mm:ss
     return "00:00:00"
 
-
 def get_audio_duration(audio_file):
     if not audio_file:
         return None
-    
-    temp_filename = "temp_audio.mp3"  # Explicit filename
-    temp_file_path = os.path.join(default_storage.location, temp_filename)
 
-    # Save file correctly before trying to read it
-    with default_storage.open(temp_filename, 'wb') as temp_file:
-        temp_file.write(audio_file.read())
-
-    audio = MP3(temp_file_path)  # Load file correctly now that it exists
-    return round(audio.info.length)  # Return duration in seconds safely
-
+    file_stream = BytesIO(audio_file.read())  # Convert to in-memory stream
+    audio = MP3(file_stream)  # Load MP3 without saving
+    return round(audio.info.length)  # Return duration in seconds
 
 @api_view(['POST'])
 @parser_classes([MultiPartParser, FormParser])
@@ -69,7 +61,6 @@ def upload_song(request):
     print(f"DEBUG: Validation Errors - {serializer.errors}")
     return Response(serializer.errors, status=400)
 
-
 @api_view(['GET'])
 def list_songs(request):
     songs = Song.objects.all()
@@ -79,7 +70,7 @@ def list_songs(request):
 @api_view(['GET'])
 def get_song(request, song_id):
     try:
-        song = Song.objects.get(_id=song_id)
+        song = Song.objects.get(_id=ObjectId(song_id))
         serializer = SongSerializer(song)
         return Response(serializer.data)
     except Song.DoesNotExist:
@@ -88,7 +79,7 @@ def get_song(request, song_id):
 @api_view(['PUT'])
 def update_song(request, song_id):
     try:
-        song = Song.objects.get(_id=song_id)
+        song = Song.objects.get(_id=ObjectId(song_id))
         serializer = SongSerializer(song, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
@@ -100,7 +91,7 @@ def update_song(request, song_id):
 @api_view(['DELETE'])
 def delete_song(request, song_id):
     try:
-        song = Song.objects.get(_id=song_id)
+        song = Song.objects.get(_id=ObjectId(song_id))
         song.delete()
         return Response({"message": "Song deleted successfully!"})
     except Song.DoesNotExist:
