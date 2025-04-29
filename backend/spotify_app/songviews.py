@@ -76,17 +76,29 @@ def get_song(request, song_id):
     except Song.DoesNotExist:
         return Response({"error": "Song not found"}, status=404)
     
+from rest_framework.response import Response
+from bson import ObjectId
+
 @api_view(['PUT'])
 def update_song(request, song_id):
     try:
-        song = Song.objects.get(_id=ObjectId(song_id))
+        # Ensure song_id is a valid ObjectId
+        try:
+            song = Song.objects.get(_id=ObjectId(song_id))
+        except (Song.DoesNotExist, ValueError):
+            return Response({"error": "Invalid Song ID or Song not found"}, status=404)
+
+        # Validate and update song data
         serializer = SongSerializer(song, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return Response({"message": "Song updated!", "data": serializer.data})
-        return Response(serializer.errors, status=400)
-    except Song.DoesNotExist:
-        return Response({"error": "Song not found"}, status=404)
+            return Response({"message": "Song updated!", "data": serializer.data}, status=200)
+        else:
+            return Response(serializer.errors, status=400)
+
+    except Exception as e:
+        print(f"ERROR: {str(e)}")  # Debug logs
+        return Response({"error": "Internal Server Error"}, status=500)
     
 @api_view(['DELETE'])
 def delete_song(request, song_id):
@@ -96,5 +108,40 @@ def delete_song(request, song_id):
         return Response({"message": "Song deleted successfully!"})
     except Song.DoesNotExist:
         return Response({"error": "Song not found"}, status=404)
-    
 
+@api_view(['PUT'])
+def hide_song(request, song_id):
+    try:
+        # Ensure song_id is valid
+        try:
+            song = Song.objects.get(_id=ObjectId(song_id))
+        except (Song.DoesNotExist, ValueError):
+            return Response({"error": "Invalid Song ID or Song not found"}, status=404)
+
+        # Update the song's visibility
+        song.isHidden = True
+        song.save()
+
+        return Response({"message": "Song hidden successfully!", "data": {"song_id": str(song._id), "isHidden": song.isHidden}}, status=200)
+
+    except Exception as e:
+        print(f"ERROR: {str(e)}")  # Debugging log
+        return Response({"error": "Internal Server Error"}, status=500)
+
+@api_view(['PUT'])
+def unhide_song(request, song_id):
+    try:
+        # Ensure song_id is valid
+        try:
+            song = Song.objects.get(_id=ObjectId(song_id))
+        except (Song.DoesNotExist, ValueError):
+            return Response({"error": "Invalid Song ID or Song not found"}, status=404)
+
+        # Update the song's visibility
+        song.isHidden = False
+        song.save()
+
+        return Response({"message": "Song unhidden successfully!", "data": {"song_id": str(song._id), "isHidden": song.isHidden}}, status=200)
+
+    except Exception as e:
+        print(f"ERROR: {str(e)}")

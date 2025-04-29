@@ -1,13 +1,15 @@
 from django.urls import path
-from . import views
+from . import songviews
 from . import albumviews
 urlpatterns = [
 
-    path('songs/', views.list_songs, name='list_songs'),
-    path('songs/upload/', views.upload_song, name='upload_song'),
-    path('songs/<str:song_id>/', views.get_song, name='get_song'),
-    path('songs/<str:song_id>/update/', views.update_song, name='update_song'),
-    path('songs/<str:song_id>/delete/', views.delete_song, name='delete_song'),
+    path('songs/', songviews.list_songs, name='list_songs'),
+    path('songs/upload/', songviews.upload_song, name='upload_song'),
+    path('songs/<str:song_id>/', songviews.get_song, name='get_song'),
+    path('songs/<str:song_id>/update/', songviews.update_song, name='update_song'),
+    path('songs/<str:song_id>/delete/', songviews.delete_song, name='delete_song'),
+    path('songs/<str:song_id>/hide/', songviews.hide_song, name='hide_song'),
+    path('songs/<str:song_id>/unhide/', songviews.unhide_song, name='unhide_song'),
     path('albums/', albumviews.list_albums, name='list_albums'),
     path('albums/upload/', albumviews.create_album, name='upload_album'),
     path('albums/<str:album_id>/', albumviews.get_album, name='get_album'),
