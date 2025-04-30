@@ -51,18 +51,30 @@ INSTALLED_APPS = [
 ]
 
 
+# MIDDLEWARE = [
+#     'corsheaders.middleware.CorsMiddleware',
+#     'django.middleware.security.SecurityMiddleware',
+#     'django.contrib.sessions.middleware.SessionMiddleware',
+#     'django.middleware.common.CommonMiddleware',
+#     'django.middleware.csrf.CsrfViewMiddleware',
+#     # Thêm middleware JWT 
+#     'spotify_app.middlewares.JWTAuthMiddleware',
+#     'django.contrib.auth.middleware.AuthenticationMiddleware',
+#     'django.contrib.messages.middleware.MessageMiddleware',
+#     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+# ]
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    # Thêm middleware JWT 
-    'spotify_app.middlewares.JWTAuthMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',  # Giữ lại để quản lý request.user
+    'spotify_app.middlewares.JWTAuthMiddleware',  # Kiểm tra token JWT 
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
 
 CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
@@ -98,7 +110,7 @@ DATABASES = {
         'NAME': 'spotify_database',  # Replace with your MongoDB database name
         'HOST': 'localhost',         # MongoDB server address
         'PORT': 27017,               # Default MongoDB port
-        'ENFORCE_SCHEMA': True,       # Set to False if you don't want to enforce schema
+        'ENFORCE_SCHEMA': False,       # Set to False if you don't want to enforce schema
     }
 }
 
@@ -165,6 +177,9 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    # 'DEFAULT_PERMISSION_CLASSES': (
+    #     'rest_framework.permissions.IsAuthenticated',
+    # ),
 }
 
 from datetime import timedelta
@@ -182,16 +197,32 @@ SIMPLE_JWT = {
     # Đưa refresh token cũ vào blacklist
     'BLACKLIST_AFTER_ROTATION': True,
     
+    'UPDATE_LAST_LOGIN': False,
+
     # Thuật toán mã hóa
     'ALGORITHM': 'HS256',
     'SIGNING_KEY': SECRET_KEY,
+    'VERIFYING_KEY': None,
+    'AUDIENCE': None,
+    'ISSUER': None,
     
     # Cấu hình header Authorization
     'AUTH_HEADER_TYPES': ('Bearer',),
-    
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
     # Sử dụng trường _id của MongoDB
-    'USER_ID_FIELD': '_id',
-    'USER_ID_CLAIM': '_id',
+    'USER_ID_FIELD': '_id', # Khớp với tên trường trong MongoDB
+    'USER_ID_CLAIM': '_id',  # Khớp với claim trong token
+
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
+
+    'JTI_CLAIM': 'jti',
+
+    'SLING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
+    'SLIDING_TOKEN_LIFETIME': timedelta(minutes=5),
+    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=7),
+    
+
 }
 
 
