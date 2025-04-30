@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -41,6 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',  # Quản lý refresh token (optional)
     'djongo',
     'spotify_app',
     'user_management',
@@ -55,6 +57,8 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    # Thêm middleware JWT 
+    'spotify_app.middlewares.JWTAuthMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -94,7 +98,7 @@ DATABASES = {
         'NAME': 'spotify_database',  # Replace with your MongoDB database name
         'HOST': 'localhost',         # MongoDB server address
         'PORT': 27017,               # Default MongoDB port
-        'ENFORCE_SCHEMA': False,       # Set to False if you don't want to enforce schema
+        'ENFORCE_SCHEMA': True,       # Set to False if you don't want to enforce schema
     }
 }
 
@@ -154,6 +158,43 @@ SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 SPOTIFY_REDIRECT_URI = os.getenv("REDIRECT_URI")
 SCOPE = "user-read-private user-read-email"
+
+
+# Authentication settings
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
+
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    # Thời gian sống của access token (5 phút cho bảo mật cao)
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
+    
+    # Thời gian sống của refresh token (7 ngày)
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    
+    # Tự động tạo refresh token mới khi refresh
+    'ROTATE_REFRESH_TOKENS': True,
+    
+    # Đưa refresh token cũ vào blacklist
+    'BLACKLIST_AFTER_ROTATION': True,
+    
+    # Thuật toán mã hóa
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    
+    # Cấu hình header Authorization
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    
+    # Sử dụng trường _id của MongoDB
+    'USER_ID_FIELD': '_id',
+    'USER_ID_CLAIM': '_id',
+}
+
+
 
 # def get_token():
 #     auth_string = SPOTIFY_CLIENT_ID + ":" + SPOTIFY_CLIENT_SECRET

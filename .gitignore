@@ -20,3 +20,6 @@ Thumbs.db
 *.lock
 *.whl
 pip-log.txt
+
+# Virtual environment
+spotify_envi/
