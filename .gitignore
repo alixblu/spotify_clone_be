@@ -5,7 +5,6 @@ db.sqlite3
 /static/
 *.pot
 *.mo
-/media/
 
 # Environment variables
 .env
@@ -20,3 +19,6 @@ Thumbs.db
 *.lock
 *.whl
 pip-log.txt
+
+spotify_envi/
+metadata/
