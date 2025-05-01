@@ -1,16 +1,20 @@
-from rest_framework.decorators import api_view, permission_classes, authentication_classes
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework import status
 from .models import User
 from .serializers import *
-from rest_framework_simplejwt.tokens import RefreshToken
-from datetime import timedelta
-from bson import ObjectId
+from datetime import datetime, timedelta
+from django.conf import settings
 import traceback
+import jwt
+import uuid
+from spotify_app.middlewares import JWTAuthMiddleware
+from spotify_app.permissionsCustom import IsAdminUser
+from rest_framework.pagination import LimitOffsetPagination
 
 @api_view(['POST'])
-# @permission_classes([AllowAny])  # Không yêu cầu token
+@permission_classes([AllowAny])  # Cho phép bất kỳ ai truy cập
 def register(request):
     try:
         required_fields = ['name', 'dob', 'gender', 'email', 'password']
@@ -37,118 +41,140 @@ def register(request):
             "detail": str(e)
         }, status=500)
 
-    
+# API đăng nhập
 @api_view(['POST'])
-# @permission_classes([AllowAny])  # Không yêu cầu token
+@permission_classes([AllowAny])
 def login(request):
+    # Lấy email và password từ request
     email = request.data.get('email')
     password = request.data.get('password')
+    
+    # Validate input
+    if not email or not password:
+        return Response({
+            "success": False,
+            "error": "Email và mật khẩu là bắt buộc"
+        }, status=status.HTTP_400_BAD_REQUEST)
 
     try:
+        # Tìm user bằng email
         user = User.objects.get(email=email)
-        if user.check_password(password):
-            # Tạo token thủ công
-            # # refresh = RefreshToken()
-            # # user_id = str(user._id) if isinstance(user._id, ObjectId) else str(user._id)
-            user_id = str(user._id)
-            refresh = RefreshToken()
-            refresh['_id'] = user_id  # Claim phải khớp với SIMPLE_JWT config
-            refresh['token_type'] = 'refresh'  # Thêm token_type bắt buộc
-            access = refresh.access_token
-            access['_id'] = user_id
-            access['token_type'] = 'access'    # Thêm token_type bắt buộc
-
-            # # Đảm bảo user._id là string
-            # user_id = str(user._id) if isinstance(user._id, ObjectId) else user._id
-
-            # # Tạo token thủ công với payload chuẩn
-            # refresh = RefreshToken()
-            # refresh['user_id'] = user_id 
-            # refresh['token_type'] = 'refresh'
-
-            # access = refresh.access_token
-            # access['user_id'] = user_id
-            # access['token_type'] = 'access'
-            # ĐẢM BẢO DÙNG ĐÚNG _id TỪ DATABASE
-
-            # Tạo token thủ công (không dùng for_user)
-          
-            # refresh = RefreshToken()
-            # refresh['_id'] = str(user._id)  # Convert ObjectId -> string
-            # refresh['token_type'] = 'refresh'
-            
-            # access = refresh.access_token
-            # access['_id'] = str(user._id)
-     
-            # Tạo response
-            response = Response({
-                "success": True,
-                "message": "Login successful!",
-                "user": MinimalUserSerializer(user).data,
-                "access_token": str(access),
-                "refresh_token": str(refresh),
-            })
-            # Set HttpOnly Cookie cho refresh token (chỉ backend truy cập được)
-            response.set_cookie(
-                key="refresh_token",
-                value=str(refresh),
-                httponly=True,  # Chống XSS
-                secure=False,     # Chỉ gửi qua HTTPS
-                samesite="Lax",
-                max_age=timedelta(days=7).total_seconds(),  # 7 ngày
-                # path="/auth/",  # Chỉ gửi cookie tới các route /auth/*
-                )
-
-            return response
-            # return Response({"message": "Login successful!", "data": MinimalUserSerializer(user).data}, status=200)
-        else:
-            return Response({"success": False, "error": "Incorrect email or password"}, status=401)
-    except User.DoesNotExist:
-        return Response({"success": False, "error": "Incorrect email or password"}, status=404)
-    
-# API refresh access token  
-@api_view(['POST'])
-# @permission_classes([AllowAny])  # Không yêu cầu token
-def refresh_access_token(request):
-    # 1. Lấy refresh token từ cookie
-    refresh_token = request.COOKIES.get('refresh_token')
-    
-    # 2. Kiểm tra nếu không có token
-    if not refresh_token:
-        return Response({"error": "No refresh token provided."}, status=401)
-
-    try:
-        # 3. Xác thực refresh token
-        refresh = RefreshToken(refresh_token)
         
-        # 4. Lấy user ID từ token
-        user_id = refresh['_id']
+        # Kiểm tra mật khẩu
+        if not user.check_password(password):
+            return Response({
+                "success": False,
+                "error": "Email hoặc mật khẩu không đúng"
+            }, status=status.HTTP_401_UNAUTHORIZED)
 
-        # 5. Tạo access token mới từ refresh token
-        access = refresh.access_token
-        
-        # 6. Thêm user ID vào access token
-        access['_id'] = user_id
+        # Tạo access_token
+        access_token = JWTAuthMiddleware.create_access_token(user)
+        # Tạo refresh_token thủ công
+        refresh_token = JWTAuthMiddleware.create_refresh_token(user)
+        # Tạo response
+        response_data = {
+            "success": True,
+            "message": "Đăng nhập thành công",
+            "data": MinimalUserSerializer(user).data,
+            "access_token": access_token,  # Trả token trong response
+            "refresh_token": refresh_token
+        }
 
-        # 7. Tạo response chứa access token mới
-        response = Response({
-            "message": "Access token refreshed successfully",
-            "access_token": str(access)
-        })
+        response = Response(response_data, status=status.HTTP_200_OK)
+
+        # Set HttpOnly Cookie cho refresh token (chỉ backend truy cập được)
+        # Gửi refresh token dưới dạng HttpOnly Cookie
+        response.set_cookie(
+            key="refresh_token",
+            value=refresh_token,
+            httponly=True,
+            secure=False,
+            samesite="Lax",
+            max_age=int(timedelta(days=7).total_seconds())
+        )
 
         return response
 
+    except User.DoesNotExist:
+        return Response({
+            "success": False,
+            "error": "Email hoặc mật khẩu không đúng"
+        }, status=status.HTTP_401_UNAUTHORIZED)
     except Exception as e:
-        # 8. Xử lý lỗi nếu token không hợp lệ
-        return Response({"error": "Invalid or expired refresh token."}, status=401)
+        return Response({
+            "success": False,
+            "error": "Đã xảy ra lỗi khi đăng nhập",
+            "detail": str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+# API refresh access token  
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def refresh_access_token(request):
+    refresh_token = request.COOKIES.get('refresh_token')
+
+    if not refresh_token:
+        return Response({"error": "Không tìm thấy refresh token."}, status=401)
+
+    try:
+        decoded = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=["HS256"])
+
+        if decoded.get("token_type") != "refresh":
+            return Response({"error": "Token không hợp lệ."}, status=401)
+
+        user_id = decoded.get("user_id")
+        email = decoded.get("email")
+
+        # Tạo access token mới
+        access_payload = {
+            "token_type": "access",
+            "exp": datetime.utcnow() + timedelta(minutes=15),
+            "jti": str(uuid.uuid4()),
+            "user_id": user_id,
+            "_id": user_id,
+            "email": email
+        }
+
+        new_access_token = jwt.encode(access_payload, settings.SECRET_KEY, algorithm="HS256")
+
+        return Response({
+            "message": "Cấp lại access token thành công",
+            "access_token": new_access_token
+        })
+
+    except jwt.ExpiredSignatureError:
+        return Response({"error": "Refresh token đã hết hạn."}, status=401)
+
+    except jwt.InvalidTokenError:
+        return Response({"error": "Refresh token không hợp lệ."}, status=401)
+
+    except Exception as e:
+        return Response({"error": "Đã xảy ra lỗi.", "detail": str(e)}, status=500)
+
+
+# API lấy danh sách người dùng
 @api_view(['GET'])
+@permission_classes([IsAdminUser])
 def get_user_list(request):
-    # Lấy tất cả người dùng từ cơ sở dữ liệu
-    users = User.objects.all()
-    
-    # Serialize dữ liệu
-    serialized_users = UserSerializer(users, many=True)
-    
-    # Trả về danh sách người dùng
-    return Response({"message": "User list retrieved successfully", "data": serialized_users.data}, status=200)
+    # Lọc theo email và name
+    email = request.query_params.get('email')
+    name = request.query_params.get('name')
+
+    queryset = User.objects.all()
+    if email:
+        queryset = queryset.filter(email__icontains=email)
+    if name:
+        queryset = queryset.filter(name__icontains=name)  # hoặc 'name' nếu model có field đó
+
+    # Phân trang
+    paginator = LimitOffsetPagination()
+    paginated_queryset = paginator.paginate_queryset(queryset, request, view=None)
+    serializer = UserSerializer(paginated_queryset, many=True)
+
+    # Trả về response phân trang
+    return paginator.get_paginated_response({
+        "success": True,
+        "message": "User list retrieved successfully",
+        "data": serializer.data
+    })

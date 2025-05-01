@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework_simplejwt',  # Thêm app này để sử dụng blacklist
+    'rest_framework.authtoken',  # Thêm app này để sử dụng token
     'rest_framework_simplejwt.token_blacklist',  # Quản lý refresh token (optional)
     'djongo',
     'spotify_app',
@@ -175,11 +177,13 @@ SCOPE = "user-read-private user-read-email"
 # Authentication settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        # 'rest_framework_simplejwt.authentication.JWTAuthentication',
+        # 'rest_framework.authentication.TokenAuthentication',
+        # 'spotify_app.middlewares.JWTAuthMiddleware',
     ),
-    # 'DEFAULT_PERMISSION_CLASSES': (
-    #     'rest_framework.permissions.IsAuthenticated',
-    # ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
 }
 
 from datetime import timedelta
@@ -212,6 +216,8 @@ SIMPLE_JWT = {
     # Sử dụng trường _id của MongoDB
     'USER_ID_FIELD': '_id', # Khớp với tên trường trong MongoDB
     'USER_ID_CLAIM': '_id',  # Khớp với claim trong token
+
+    'TOKEN_USER_CLASS': 'rest_framework_simplejwt.models.TokenUser',
 
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
     'TOKEN_TYPE_CLAIM': 'token_type',
