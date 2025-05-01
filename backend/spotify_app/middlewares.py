@@ -61,6 +61,8 @@ class JWTAuthMiddleware:
             '/user_management/auth/token/refresh/',
             '/admin/',
             '/spotify_api/', # Không yêu cầu token với các api của spotify
+            # Spotify app API
+            # '/spotify_app/songs/',
         ]
 
     def __call__(self, request):

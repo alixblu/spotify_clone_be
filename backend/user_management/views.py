@@ -119,27 +119,19 @@ def refresh_access_token(request):
 
     try:
         decoded = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=["HS256"])
-
+        
         if decoded.get("token_type") != "refresh":
             return Response({"error": "Token không hợp lệ."}, status=401)
 
-        user_id = decoded.get("user_id")
         email = decoded.get("email")
-
-        # Tạo access token mới
-        access_payload = {
-            "token_type": "access",
-            "exp": datetime.utcnow() + timedelta(minutes=15),
-            "jti": str(uuid.uuid4()),
-            "user_id": user_id,
-            "_id": user_id,
-            "email": email
-        }
-
-        new_access_token = jwt.encode(access_payload, settings.SECRET_KEY, algorithm="HS256")
-
+         # Tìm user bằng email
+        user = User.objects.get(email=email)
+        
+        # Tạo access_token
+        new_access_token = JWTAuthMiddleware.create_access_token(user)
         return Response({
             "message": "Cấp lại access token thành công",
+            "data": MinimalUserSerializer(user).data,
             "access_token": new_access_token
         })
 

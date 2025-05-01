@@ -1,9 +1,11 @@
 # Create your views here.
 ##########
 
-from rest_framework.decorators import api_view, parser_classes
+from rest_framework.decorators import api_view, parser_classes, permission_classes
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
+from spotify_app.permissionsCustom import IsAdminUser
 from .models import Song
 from .serializers import SongSerializer
 from mutagen.mp3 import MP3
@@ -26,6 +28,7 @@ def get_audio_duration(audio_file):
     return round(audio.info.length)  # Return duration in seconds
 
 @api_view(['POST'])
+@permission_classes([IsAdminUser])
 @parser_classes([MultiPartParser, FormParser])
 def upload_song(request):
     # print(f"DEBUG: Received request data - {request.data}")
@@ -62,6 +65,7 @@ def upload_song(request):
     return Response(serializer.errors, status=400)
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def list_songs(request):
     songs = Song.objects.all()
     serializer = SongSerializer(songs, many=True)
