@@ -20,5 +20,7 @@ Thumbs.db
 *.whl
 pip-log.txt
 
+# Virtual environment
 spotify_envi/
 backend/metadata
+

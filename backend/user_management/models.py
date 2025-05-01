@@ -25,5 +25,9 @@ class User(models.Model):
     def check_password(self, raw_password):
         return bcrypt.checkpw(raw_password.encode('utf-8'), self.password.encode('utf-8'))
 
+    @property
+    def id(self):
+        return str(self._id)  # Giúp tương thích với các thư viện Django
+
     def __str__(self):
         return self.name

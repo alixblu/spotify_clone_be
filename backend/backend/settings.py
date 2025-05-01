@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -41,6 +42,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework_simplejwt',  # Thêm app này để sử dụng blacklist
+    'rest_framework.authtoken',  # Thêm app này để sử dụng token
+    'rest_framework_simplejwt.token_blacklist',  # Quản lý refresh token (optional)
     'djongo',
     'spotify_app',
     'user_management',
@@ -49,16 +53,30 @@ INSTALLED_APPS = [
 ]
 
 
+# MIDDLEWARE = [
+#     'corsheaders.middleware.CorsMiddleware',
+#     'django.middleware.security.SecurityMiddleware',
+#     'django.contrib.sessions.middleware.SessionMiddleware',
+#     'django.middleware.common.CommonMiddleware',
+#     'django.middleware.csrf.CsrfViewMiddleware',
+#     # Thêm middleware JWT 
+#     'spotify_app.middlewares.JWTAuthMiddleware',
+#     'django.contrib.auth.middleware.AuthenticationMiddleware',
+#     'django.contrib.messages.middleware.MessageMiddleware',
+#     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+# ]
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',  # Giữ lại để quản lý request.user
+    'spotify_app.middlewares.JWTAuthMiddleware',  # Kiểm tra token JWT 
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
 
 CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
@@ -154,6 +172,66 @@ SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 SPOTIFY_REDIRECT_URI = os.getenv("REDIRECT_URI")
 SCOPE = "user-read-private user-read-email"
+
+
+# Authentication settings
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        # 'rest_framework_simplejwt.authentication.JWTAuthentication',
+        # 'rest_framework.authentication.TokenAuthentication',
+        # 'spotify_app.middlewares.JWTAuthMiddleware',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+}
+
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    # Thời gian sống của access token (5 phút cho bảo mật cao)
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
+    
+    # Thời gian sống của refresh token (7 ngày)
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    
+    # Tự động tạo refresh token mới khi refresh
+    'ROTATE_REFRESH_TOKENS': True,
+    
+    # Đưa refresh token cũ vào blacklist
+    'BLACKLIST_AFTER_ROTATION': True,
+    
+    'UPDATE_LAST_LOGIN': False,
+
+    # Thuật toán mã hóa
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'VERIFYING_KEY': None,
+    'AUDIENCE': None,
+    'ISSUER': None,
+    
+    # Cấu hình header Authorization
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
+    # Sử dụng trường _id của MongoDB
+    'USER_ID_FIELD': '_id', # Khớp với tên trường trong MongoDB
+    'USER_ID_CLAIM': '_id',  # Khớp với claim trong token
+
+    'TOKEN_USER_CLASS': 'rest_framework_simplejwt.models.TokenUser',
+
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
+
+    'JTI_CLAIM': 'jti',
+
+    'SLING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
+    'SLIDING_TOKEN_LIFETIME': timedelta(minutes=5),
+    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=7),
+    
+
+}
+
+
 
 # def get_token():
 #     auth_string = SPOTIFY_CLIENT_ID + ":" + SPOTIFY_CLIENT_SECRET
