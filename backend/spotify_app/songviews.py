@@ -1,9 +1,11 @@
 # Create your views here.
 ##########
 
-from rest_framework.decorators import api_view, parser_classes
+from rest_framework.decorators import api_view, parser_classes, permission_classes
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
+from spotify_app.permissionsCustom import IsAdminUser
 from .models import Song
 from .serializers import SongSerializer
 from mutagen.mp3 import MP3
@@ -11,6 +13,7 @@ from bson import ObjectId
 from django.core.exceptions import ValidationError
 import datetime
 from io import BytesIO
+from backend.utils import SchemaFactory
 
 def format_duration(seconds):
     if seconds:
@@ -25,7 +28,40 @@ def get_audio_duration(audio_file):
     audio = MP3(file_stream)  # Load MP3 without saving
     return round(audio.info.length)  # Return duration in seconds
 
+# schema cho api upload song
+# 1. Upload Song API
+@SchemaFactory.post_schema(
+    request_example={
+        "title": "Bài hát mới",
+        "audio_file": "<binary_file>",
+        "video_file": "<binary_file>",
+        "img": "https://example.com/image.jpg",
+        "album_id": "507f1f77bcf86cd799439011"
+    },
+    success_response={
+        "message": "Song uploaded successfully!",
+        "data": {
+            "_id": "507f1f77bcf86cd799439011",
+            "title": "Bài hát mới",
+            "duration": "00:03:45",
+            "audio_file": "/media/audio/song.mp3",
+            "video_file": "/media/video/song.mp4",
+            "img": "https://example.com/image.jpg",
+            "album_id": "507f1f77bcf86cd799439011"
+        }
+    },
+    error_responses=[
+        {
+            "name": "Invalid file",
+            "response": {"error": "No audio or video file received"},
+            "status_code": 400
+        }
+    ],
+    description="Upload a new song with audio and video files",
+    request_serializer=SongSerializer
+)
 @api_view(['POST'])
+@permission_classes([IsAdminUser])
 @parser_classes([MultiPartParser, FormParser])
 def upload_song(request):
     # print(f"DEBUG: Received request data - {request.data}")
@@ -61,13 +97,46 @@ def upload_song(request):
     print(f"DEBUG: Validation Errors - {serializer.errors}")
     return Response(serializer.errors, status=400)
 
+
+# 2. List Songs API
+@SchemaFactory.list_schema(
+    item_example={
+        "_id": "507f1f77bcf86cd799439011",
+        "title": "Bài hát mẫu",
+        "duration": "00:03:45",
+        "audio_file": "/media/audio/song.mp3",
+        "video_file": "/media/video/song.mp4",
+        "img": "https://example.com/image.jpg",
+        "album_id": "507f1f77bcf86cd799439011",
+        "isHidden": False
+    },
+    description="Get list of all songs (public)"
+)
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def list_songs(request):
     songs = Song.objects.all()
     serializer = SongSerializer(songs, many=True)
     return Response(serializer.data)
 
+
+# 3. Get Song Detail API
+@SchemaFactory.retrieve_schema(
+    item_id_param="song_id",
+    success_response={
+        "_id": "507f1f77bcf86cd799439011",
+        "title": "Bài hát mẫu",
+        "duration": "00:03:45",
+        "audio_file": "/media/audio/song.mp3",
+        "video_file": "/media/video/song.mp4",
+        "img": "https://example.com/image.jpg",
+        "album_id": "507f1f77bcf86cd799439011",
+        "isHidden": False
+    },
+    description="Get details of a specific song"
+)
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def get_song(request, song_id):
     try:
         song = Song.objects.get(_id=ObjectId(song_id))
@@ -79,7 +148,31 @@ def get_song(request, song_id):
 from rest_framework.response import Response
 from bson import ObjectId
 
+
+# 4. Update Song API
+@SchemaFactory.update_schema(
+    item_id_param="song_id",
+    request_example={
+        "title": "Tên bài hát mới",
+        "img": "https://example.com/new_image.jpg"
+    },
+    success_response={
+        "message": "Song updated!",
+        "data": {
+            "_id": "507f1f77bcf86cd799439011",
+            "title": "Tên bài hát mới",
+            "duration": "00:03:45",
+            "audio_file": "/media/audio/song.mp3",
+            "video_file": "/media/video/song.mp4",
+            "img": "https://example.com/new_image.jpg",
+            "album_id": "507f1f77bcf86cd799439011"
+        }
+    },
+    description="Update song information (partial update supported)",
+    request_serializer=SongSerializer
+)
 @api_view(['PUT'])
+@permission_classes([IsAdminUser])
 def update_song(request, song_id):
     try:
         # Ensure song_id is a valid ObjectId
@@ -100,7 +193,18 @@ def update_song(request, song_id):
         print(f"ERROR: {str(e)}")  # Debug logs
         return Response({"error": "Internal Server Error"}, status=500)
     
+
+# 5. Delete Song API
+@SchemaFactory.delete_schema(
+    item_id_param="song_id",
+    success_response={
+        "message": "Song deleted successfully!",
+        "deleted_id": "507f1f77bcf86cd799439011"
+    },
+    description="Delete a song permanently"
+)    
 @api_view(['DELETE'])
+@permission_classes([IsAdminUser])
 def delete_song(request, song_id):
     try:
         song = Song.objects.get(_id=ObjectId(song_id))
@@ -109,7 +213,21 @@ def delete_song(request, song_id):
     except Song.DoesNotExist:
         return Response({"error": "Song not found"}, status=404)
 
+
+# 6. Hide Song API
+@SchemaFactory.update_schema(
+    item_id_param="song_id",
+    success_response={
+        "message": "Song hidden successfully!",
+        "data": {
+            "song_id": "507f1f77bcf86cd799439011",
+            "isHidden": True
+        }
+    },
+    description="Hide a song (mark as not visible to public)"
+)
 @api_view(['PUT'])
+@permission_classes([IsAdminUser])
 def hide_song(request, song_id):
     try:
         # Ensure song_id is valid
@@ -128,7 +246,21 @@ def hide_song(request, song_id):
         print(f"ERROR: {str(e)}")  # Debugging log
         return Response({"error": "Internal Server Error"}, status=500)
 
+
+# 7. Unhide Song API
+@SchemaFactory.update_schema(
+    item_id_param="song_id",
+    success_response={
+        "message": "Song unhidden successfully!",
+        "data": {
+            "song_id": "507f1f77bcf86cd799439011",
+            "isHidden": False
+        }
+    },
+    description="Unhide a song (mark as visible to public)"
+)
 @api_view(['PUT'])
+@permission_classes([IsAdminUser])
 def unhide_song(request, song_id):
     try:
         # Ensure song_id is valid

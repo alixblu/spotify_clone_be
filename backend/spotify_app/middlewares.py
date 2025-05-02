@@ -56,11 +56,20 @@ class JWTAuthMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
         self.public_paths = [
+            # swagger 
+            '/api/schema',
+            '/api/docs/redoc',
+            '/api/docs/swagger',
+            # user management
             '/user_management/register/',
             '/user_management/login/',
             '/user_management/auth/token/refresh/',
             '/admin/',
+            # spotify api
             '/spotify_api/', # Không yêu cầu token với các api của spotify
+            # Spotify app API
+            # '/spotify_app/songs/',
+            
         ]
 
     def __call__(self, request):

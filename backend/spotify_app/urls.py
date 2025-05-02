@@ -1,6 +1,8 @@
 from django.urls import path
 from . import songviews
 from . import albumviews
+from . import playlistviews
+from . import playlist_songviews
 urlpatterns = [
 
     path('songs/', songviews.list_songs, name='list_songs'),
@@ -15,6 +17,10 @@ urlpatterns = [
     path('albums/<str:album_id>/', albumviews.get_album, name='get_album'),
     path('albums/<str:album_id>/update/', albumviews.update_album, name='update_album'),
     path('albums/<str:album_id>/delete/', albumviews.delete_album, name='delete_album'),
+    # PLAYLIST
+    path('playlists/create', playlistviews.create_playlist, name='create_playlist'),
+    # PLAYLIST SONGS
+    path('playlists/<str:playlist_id>/add_songs', playlist_songviews.add_songs_to_playlist, name='add_songs_to_playlist'),
 ]
 
 
