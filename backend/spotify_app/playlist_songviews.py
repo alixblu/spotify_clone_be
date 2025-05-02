@@ -71,7 +71,36 @@ from music_library.models import PlaylistSong
 from .serializers import PlaylistSongSerializer
 from django.utils.timezone import now
 import traceback
+from backend.utils import SchemaFactory
 
+# Thêm bài hát vào playlist
+@SchemaFactory.post_schema(
+    request_example={
+        "song_id": "507f1f77bcf86cd799439011"
+    },
+    success_response={
+        "message": "Song added to playlist successfully",
+        "playlist_song": {
+            "playlist_id": "507f1f77bcf86cd799439012",
+            "song_id": "507f1f77bcf86cd799439011",
+            "added_at": "2023-01-01T00:00:00Z"
+        }
+    },
+    error_responses=[
+        {
+            "name": "Thiếu song_id",
+            "response": {"error": "Song ID is required"},
+            "status_code": 400
+        },
+        {
+            "name": "Bài hát đã tồn tại",
+            "response": {"error": "Song already exists in this playlist"},
+            "status_code": 400
+        }
+    ],
+    description="Thêm bài hát vào playlist",
+    request_serializer=PlaylistSongSerializer,
+)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def add_songs_to_playlist(request, playlist_id):

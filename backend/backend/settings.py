@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',  # Thêm app này để sử dụng blacklist
     'rest_framework.authtoken',  # Thêm app này để sử dụng token
     'rest_framework_simplejwt.token_blacklist',  # Quản lý refresh token (optional)
+    'drf_spectacular',  # Swagger
     'djongo',
     'spotify_app',
     'user_management',
@@ -179,11 +180,13 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         # 'rest_framework_simplejwt.authentication.JWTAuthentication',
         # 'rest_framework.authentication.TokenAuthentication',
-        # 'spotify_app.middlewares.JWTAuthMiddleware',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'PAGE_SIZE': 10,  # limit mặc định khi không truyền trên URL
 }
 
 from datetime import timedelta
@@ -231,6 +234,49 @@ SIMPLE_JWT = {
 
 }
 
+# Cấu hình cho drf-spectacular
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Spotify Clone API',
+    'DESCRIPTION': 'API documentation for Spotify Clone backend',
+    'VERSION': 'v1',
+    'TERMS_OF_SERVICE': 'https://www.google.com/policies/terms/',
+    'CONTACT': {
+        'email': 'psu95228@email.com',
+    },
+    'LICENSE': {
+        'name': 'OSS - Open Source Software _ group project',
+    },
+    'SERVE_INCLUDE_SCHEMA': False,
+    
+    # Cấu hình security đúng cách
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SECURITY': [{'Bearer': []}],  
+    
+    # Cấu hình Swagger UI
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        'persistAuthorization': True,
+        'displayOperationId': True,
+        'filter': True,
+        'docExpansion': 'none',
+    },
+    
+    # Cấu hình OpenAPI components
+    'APPEND_COMPONENTS': {
+        'securitySchemes': {
+            'Bearer': {
+                'type': 'apiKey',
+                'name': 'Authorization',
+                'in': 'header',
+                'description': 'JWT Authorization header using the Bearer scheme. Example: "Bearer {token}"'
+            }
+        }
+    },
+    
+    # Tối ưu hiệu suất
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SERVE_PUBLIC': True,
+}
 
 
 # def get_token():

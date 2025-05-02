@@ -4,15 +4,41 @@ from rest_framework.response import Response
 from rest_framework import status
 from .models import User
 from .serializers import *
-from datetime import datetime, timedelta
+from datetime import timedelta
 from django.conf import settings
 import traceback
 import jwt
-import uuid
 from spotify_app.middlewares import JWTAuthMiddleware
 from spotify_app.permissionsCustom import IsAdminUser
 from rest_framework.pagination import LimitOffsetPagination
+from backend.utils import SchemaFactory
 
+# 1. Register API
+@SchemaFactory.post_schema(
+    request_example={
+        "name": "Nguyễn Văn A",
+        "dob": "1990-01-01",
+        "gender": "male",
+        "email": "user@example.com",
+        "password": "Password@123"
+    },
+    success_response={
+        "message": "User registered successfully!",
+        "data": {
+            "_id": "681516ff88db30c4bebe9018",
+            "role": "user"
+        }
+    },
+    error_responses=[
+        {
+            "name": "Email tồn tại",
+            "response": {"error": "Email đã được sử dụng"},
+            "status_code": 400
+        }
+    ],
+    description="Đăng ký tài khoản mới",
+    request_serializer=UserSerializer
+)
 @api_view(['POST'])
 @permission_classes([AllowAny])  # Cho phép bất kỳ ai truy cập
 def register(request):
@@ -41,7 +67,32 @@ def register(request):
             "detail": str(e)
         }, status=500)
 
-# API đăng nhập
+# 2. Login API
+@SchemaFactory.post_schema(
+    request_example={
+        "email": "test2@example.com",
+        "password": "SecurePassword123"
+    },
+    success_response={
+        "success": True,
+        "message": "Đăng nhập thành công",
+        "data": {
+            "_id": "681328a710b9a4734a894e64",
+            "role": "admin"
+        },
+        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ2MjExNTk3LCJqdGkiOiJjNGNlZGFlMS1lYzM3LTQ4M2EtOGIxYS0yYjNlN2ViYTk0OGYiLCJ1c2VyX2lkIjoiNjgxMzI4YTcxMGI5YTQ3MzRhODk0ZTY0IiwiX2lkIjoiNjgxMzI4YTcxMGI5YTQ3MzRhODk0ZTY0IiwiZW1haWwiOiJ0ZXN0MkBleGFtcGxlLmNvbSIsInJvbGUiOiJhZG1pbiJ9.fZKSXR9MYOnZQeB1c5h9Y-EztWZgy0TSpJ0tMG7loSM",
+        "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc0NjgxMzM5NywianRpIjoiMWRmNjliYmItZmYwZi00M2ZhLTkzMWUtM2IxMDQxMGRmYzQ0IiwidXNlcl9pZCI6IjY4MTMyOGE3MTBiOWE0NzM0YTg5NGU2NCIsIl9pZCI6IjY4MTMyOGE3MTBiOWE0NzM0YTg5NGU2NCIsImVtYWlsIjoidGVzdDJAZXhhbXBsZS5jb20ifQ.74s5zdxCWYHy6iPZAupcI8B0hnfJLW-Fd0aG1oYF0ic"
+    },
+    error_responses=[
+        {
+            "name": "Sai thông tin đăng nhập",
+            "response": {"error": "Email hoặc mật khẩu không đúng"},
+            "status_code": 401
+        }
+    ],
+    description="Đăng nhập hệ thống",
+    request_serializer=MinimalUserSerializer
+)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login(request):
@@ -108,7 +159,25 @@ def login(request):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-# API refresh access token  
+# 3. Refresh Token API
+@SchemaFactory.post_schema(
+    success_response={
+        "message": "Làm mới token thành công",
+        "access_token": "eyJhbGci...",
+        "data": {
+            "_id": "507f1f77bcf86cd799439011",
+            "role": "admin"
+        }
+    },
+    error_responses=[
+        {
+            "name": "Token không hợp lệ",
+            "response": {"error": "Refresh token không hợp lệ hoặc đã hết hạn"},
+            "status_code": 401
+        }
+    ],
+    description="Làm mới access token bằng refresh token"
+)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def refresh_access_token(request):
@@ -145,7 +214,19 @@ def refresh_access_token(request):
         return Response({"error": "Đã xảy ra lỗi.", "detail": str(e)}, status=500)
 
 
-# API lấy danh sách người dùng
+# 4. Get Users List API
+@SchemaFactory.list_schema(
+    item_example={
+        "_id": "507f1f77bcf86cd799439011",
+        "name": "Nguyễn Văn A",
+        "email": "user@example.com",
+        "role": "user"
+    },
+    search_fields=["email", "name"],
+    description="Lấy danh sách người dùng (yêu cầu quyền admin)",
+    pagination=True,
+    serializer=UserSerializer
+)
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def get_user_list(request):

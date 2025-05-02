@@ -6,8 +6,44 @@ from .serializers import PlaylistSerializer
 from bson import ObjectId
 from user_management.models import User
 from spotify_app.permissionsCustom import IsAdminUser
+from backend.utils import SchemaFactory
 
 # API để tạo playlist mới
+@SchemaFactory.post_schema(
+    request_example={
+        "user_id": "681328a710b9a4734a894e64",
+        "name": "test playlist 3",
+        "cover_img": "https://example.com/cover.jpg",
+        "isfromDB": True,
+        "isHidden": False
+    },
+    success_response={
+        "message": "Playlist created successfully",
+        "playlist": {
+            "_id": "681531042ef7b7aa4f06830d",
+            "name": "test playlist 3",
+            "cover_img": "https://example.com/cover.jpg",
+            "created_at": "2025-05-02T20:54:28.043902Z",
+            "isfromDB": True,
+            "isHidden": False,
+            "user_id": "681328a710b9a4734a894e64"
+        }
+    },
+    error_responses=[
+        {
+            "name": "Thiếu user_id",
+            "response": {"error": "User ID is required"},
+            "status_code": 400
+        },
+        {
+            "name": "User không tồn tại",
+            "response": {"error": "This field is required."},
+            "status_code": 404
+        }
+    ],
+    description="Tạo playlist mới cho người dùng",
+    request_serializer=PlaylistSerializer
+)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def create_playlist(request):
