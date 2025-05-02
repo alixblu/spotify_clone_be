@@ -189,8 +189,8 @@ REST_FRAMEWORK = {
 from datetime import timedelta
 
 SIMPLE_JWT = {
-    # Thời gian sống của access token (5 phút cho bảo mật cao)
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
+    # Thời gian sống của access token (50 phút cho bảo mật cao)
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=50), 
     
     # Thời gian sống của refresh token (7 ngày)
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),

@@ -1,9 +1,10 @@
 from djongo import models
+from bson import ObjectId
 
 from user_management.models import User
 
 class Playlist(models.Model):
-    _id = models.ObjectIdField(primary_key=True, auto_created=True)
+    _id = models.ObjectIdField(primary_key=True, default=ObjectId, auto_created=True)
     user_id = models.ForeignKey(User, on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
     cover_img = models.URLField(blank=True, null=True)
@@ -48,7 +49,7 @@ class Album(models.Model):
         return self.album_name
     
 class Song(models.Model):
-    _id = models.ObjectIdField(primary_key=True, auto_created=True)
+    _id = models.ObjectIdField(primary_key=True, default=ObjectId, auto_created=True)
     album_id = models.ForeignKey(Album, on_delete=models.CASCADE, blank=True, null=True)
     title = models.CharField(max_length=255)
     duration = models.TimeField()
