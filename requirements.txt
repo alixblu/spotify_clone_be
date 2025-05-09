@@ -2,18 +2,22 @@
 #have to be this version because
 # This version of Django is compatible with the djongo library
 django==3.2
+djangorestframework==3.14.0
+django-cors-headers==3.13.0
+djangorestframework-simplejwt==4.8.0
 djongo==1.3.6
+sqlparse==0.4.4
 
 # For working with MongoDB
 pymongo==3.12.3
 
 # Additional libraries for frontend integration and tools
-djangorestframework>=3.14.0
-django-cors-headers>=3.13.0
+# djangorestframework>=3.14.0
+# django-cors-headers>=3.13.0
 whitenoise>=6.5.0
 
 # Optional: Authentication and permissions
-djangorestframework-simplejwt>=5.2.2
+# djangorestframework-simplejwt>=5.2.2
 django-allauth>=0.55.0
 
 # Linting and code quality

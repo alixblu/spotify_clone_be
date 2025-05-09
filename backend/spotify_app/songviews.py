@@ -31,6 +31,7 @@ def get_audio_duration(audio_file):
 # schema cho api upload song
 # 1. Upload Song API
 @SchemaFactory.post_schema(
+    item_id_param= None,
     request_example={
         "title": "Bài hát mới",
         "audio_file": "<binary_file>",
