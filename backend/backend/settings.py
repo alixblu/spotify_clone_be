@@ -44,7 +44,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',  # Thêm app này để sử dụng blacklist
     'rest_framework.authtoken',  # Thêm app này để sử dụng token
-    'rest_framework_simplejwt.token_blacklist',  # Quản lý refresh token (optional)
+    # 'rest_framework_simplejwt.token_blacklist',  # Quản lý refresh token (optional)
     'drf_spectacular',  # Swagger
     'djongo',
     'spotify_app',

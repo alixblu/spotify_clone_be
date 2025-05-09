@@ -17,6 +17,7 @@ class PlaylistSong(models.Model):
 
 
 class ArtistPerform(models.Model):
+    _id = models.ObjectIdField(primary_key=True, default=ObjectId, editable=False)
     artist_id = models.ForeignKey(Artist, on_delete=models.CASCADE)
     song_id = models.ForeignKey(Song, on_delete=models.CASCADE)
 
