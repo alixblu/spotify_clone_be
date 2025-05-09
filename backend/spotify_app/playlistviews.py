@@ -4,8 +4,10 @@ from rest_framework.response import Response
 from rest_framework import status
 from .serializers import PlaylistSerializer
 from bson import ObjectId
+from bson.errors import InvalidId
 from user_management.models import User
-from spotify_app.permissionsCustom import IsAdminUser
+from spotify_app.models import Playlist
+from spotify_app.permissionsCustom import IsAdminUser, IsAuthenticated
 from backend.utils import SchemaFactory
 
 # API để tạo playlist mới
@@ -90,3 +92,134 @@ def create_playlist(request):
     
     # Trả về lỗi nếu dữ liệu không hợp lệ
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+# API để lấy danh sách playlist theo id
+@SchemaFactory.list_schema(
+        item_example={
+            "id": "string",
+            "title": "My Playlist",
+            "description": "A great playlist",
+            # các field khác...
+        },
+        search_fields=None,
+        pagination=False,
+        description="Lấy thông tin chi tiết của một playlist",
+        serializer=PlaylistSerializer
+    )
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_playlist_by_id(request, playlist_id):
+    try:
+        # Kiểm tra playlist_id có phải là ObjectId hợp lệ không
+        object_id = ObjectId(playlist_id)
+    except (InvalidId, TypeError, ValueError):
+        return Response({
+            "success": False,
+            "message": "Invalid playlist ID format"
+        }, status=400)
+
+    try:
+        playlist = Playlist.objects.get(_id=object_id)
+        serializer = PlaylistSerializer(playlist)
+        playlist_data = serializer.data
+        # Ép kiểu các ObjectId về string
+        playlist_data['_id'] = str(playlist._id)
+        playlist_data['user_id'] = str(playlist.user_id)
+
+        return Response({
+            "success": True,
+            "message": "Playlist retrieved successfully",
+            "data": playlist_data
+        }, status=200)
+    except Playlist.DoesNotExist:
+        return Response({
+            "success": False,
+            "message": "Playlist not found"
+        }, status=404)
+    except Exception as e:
+        # Ghi log nếu cần
+        return Response({
+            "success": False,
+            "message": "An unexpected error occurred",
+            "detail": str(e)  # Có thể bỏ chi tiết lỗi ở production
+        }, status=500)
+    
+
+# API để cập nhật thông tin playlist
+@SchemaFactory.update_schema(
+    item_id_param="playlist_id",
+    request_example={
+        "name": "Tên Playlist mới",
+        "img": "https://example.com/new_image.jpg"
+    },
+    success_response={
+        "message": "Playlist updated!",
+        "data": {
+            "_id": "507f1f77bcf86cd799439011",
+            "user_id": "681328a710b9a4734a894e64",
+            "name": "Tên Playlist mới",
+            "cover_img": "https://example.com/new_image.jpg",
+            "created_at": "2025-05-02T20:54:28.043902Z",
+            "isfromDB": True,
+            "isHidden": False,
+        }
+    },
+    error_responses=None,
+    description="Update song information (partial update supported)",
+    request_serializer=PlaylistSerializer,
+    
+)
+@api_view(['PUT'])
+@permission_classes([AllowAny])
+def update_playlist(request, playlist_id):
+    try:
+        # Lấy playlist từ database
+        playlist = Playlist.objects.get(_id=ObjectId(playlist_id))
+        
+        # Kiểm tra quyền truy cập (chỉ cho phép người tạo playlist hoặc admin)
+        if str(playlist.user_id) != str(request.user.id) and not request.user.is_staff:
+            return Response({"error": "Unauthorized!!!, Only allow playlist creator or admin"}, status=403)
+        
+        # Cập nhật playlist với dữ liệu request
+        serializer = PlaylistSerializer(playlist, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)
+    
+    except Playlist.DoesNotExist:
+        return Response({"error": "Playlist not found"}, status=404)
+    
+
+# API để xóa playlist
+@SchemaFactory.delete_schema(
+    item_id_param="playlist_id",
+    success_response={"message": "Playlist deleted successfully"},
+    error_responses=[
+        {
+            "status_code": 403,
+            "description": "Unauthorized",
+            "response": {"error": "Unauthorized"}
+        },
+        {
+            "status_code": 404,
+            "description": "Playlist not found",
+            "response": {"error": "Playlist not found"}
+        }
+    ],
+    description="Delete a playlist by ID"
+)
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_playlist(request, playlist_id):
+    try:
+        playlist = Playlist.objects.get(_id=ObjectId(playlist_id))
+        if playlist.user_id != request.user.id and not request.user.is_staff:
+            return Response({"error": "Unauthorized"}, status=403)
+
+        playlist.delete()
+        return Response({"message": "Playlist deleted successfully"}, status=204)
+    except Playlist.DoesNotExist:
+        return Response({"error": "Playlist not found"}, status=404)
