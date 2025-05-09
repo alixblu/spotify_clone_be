@@ -19,6 +19,9 @@ urlpatterns = [
     path('albums/<str:album_id>/delete/', albumviews.delete_album, name='delete_album'),
     # PLAYLIST
     path('playlists/create', playlistviews.create_playlist, name='create_playlist'),
+    path('playlists/<str:playlist_id>', playlistviews.get_playlist_by_id, name='get_playlist_by_id'),
+    path('playlists/<str:playlist_id>/update', playlistviews.update_playlist, name='update_playlist'),
+    path('playlists/<str:playlist_id>/delete', playlistviews.delete_playlist, name='delete_playlist'),
     # PLAYLIST SONGS
     path('playlists/<str:playlist_id>/add_songs', playlist_songviews.add_songs_to_playlist, name='add_songs_to_playlist'),
 ]
