@@ -272,6 +272,7 @@ class SchemaFactory:
 
     @staticmethod
     def post_schema(
+        item_id_param: Optional[str] = None,
         request_example: Optional[Dict] = None,
         success_response: Optional[Dict] = None,
         error_responses: Optional[List[Dict]] = None,
@@ -280,15 +281,28 @@ class SchemaFactory:
         response_serializer=None
     ):
         """Tạo schema cho POST API"""
-        return SchemaFactory._base_schema(
-            request_example=request_example,
-            success_response=success_response,
-            error_responses=error_responses,
-            description=description,
-            request_serializer=request_serializer,
-            response_serializer=response_serializer,
-            method='POST'
-        )
+        
+        schema_args = {
+            "request_example": request_example,
+            "success_response": success_response,
+            "error_responses": error_responses,
+            "description": description,
+            "request_serializer": request_serializer,
+            "response_serializer": response_serializer,
+            "method": "POST"
+        }
+
+        if item_id_param:
+            schema_args["path_params"] = [{
+                "name": item_id_param,
+                "in": "path",
+                "required": True,
+                "schema": {"type": "string"},
+                "description": f"ID của {item_id_param.replace('_', ' ')}"
+            }]
+
+        return SchemaFactory._base_schema(**schema_args)
+
 
     @staticmethod
     def list_schema(

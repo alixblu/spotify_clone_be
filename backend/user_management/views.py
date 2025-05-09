@@ -1,5 +1,6 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from .models import User
@@ -12,6 +13,9 @@ from spotify_app.middlewares import JWTAuthMiddleware
 from spotify_app.permissionsCustom import IsAdminUser
 from rest_framework.pagination import LimitOffsetPagination
 from backend.utils import SchemaFactory
+
+from bson import ObjectId  # Import this at the top
+
 
 # 1. Register API
 @SchemaFactory.post_schema(
@@ -126,7 +130,9 @@ def login(request):
         response_data = {
             "success": True,
             "message": "Đăng nhập thành công",
-            "data": MinimalUserSerializer(user).data,
+            # "data": MinimalUserSerializer(user).data,
+            "_id": str(user.id),
+            "role": user.role,
             "access_token": access_token,  # Trả token trong response
             "refresh_token": refresh_token
         }
@@ -251,3 +257,138 @@ def get_user_list(request):
         "message": "User list retrieved successfully",
         "data": serializer.data
     })
+
+
+
+
+
+@SchemaFactory.post_schema(
+    request_example={
+        "name": "Nguyễn Văn B",
+        "dob": "1992-05-15",
+        "gender": "female",
+        "password": "NewPassword@123",
+        "profile_pic": "https://example.com/profile-images/user123.jpg"
+    },
+    success_response={
+        "success": True,
+        "message": "Cập nhật thông tin người dùng thành công",
+        "data": {
+            "_id": "681516ff88db30c4bebe9018",
+            "name": "Nguyễn Văn B",
+            "email": "user@example.com",
+            "dob": "1992-05-15",
+            "gender": "female",
+            "profile_pic": "https://example.com/profile-images/user123.jpg",
+            "role": "user"
+        }
+    },
+    error_responses=[
+        {
+            "name": "Không tìm thấy người dùng",
+            "response": {"error": "Không tìm thấy người dùng"},
+            "status_code": 404
+        },
+        {
+            "name": "Lỗi xác thực",
+            "response": {"error": "Bạn không có quyền cập nhật thông tin người dùng này"},
+            "status_code": 403
+        }
+    ],
+    description="Cập nhật thông tin người dùng (name, dob, gender, password, profile_pic)",
+    request_serializer=UserSerializer
+)
+
+@api_view(['PUT'])
+@permission_classes([AllowAny])
+def update_user(request, user_id=None):
+    print(f"Received request for user_id: {user_id}")  # Debugging line
+    try:
+        # Use _id field in the query for MongoDB (Djongo)
+        try:
+            user = User.objects.get(_id=ObjectId(user_id))# Searching by _id, not id
+            print(f"User found: {user}")
+        except User.DoesNotExist:
+            return Response({
+                "success": False,
+                "error": "Không tìm thấy người dùng"
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        # Update user fields as needed
+        allowed_fields = ['name', 'dob', 'gender', 'profile_pic']
+        for field in allowed_fields:
+            if field in request.data:
+                setattr(user, field, request.data[field])
+
+        if 'password' in request.data and request.data['password']:
+            new_password = request.data['password']  # Mật khẩu mới từ yêu cầu
+            user.password = new_password  # Cập nhật mật khẩu
+
+        user.save()
+
+        return Response({
+            "success": True,
+            "message": "Cập nhật thông tin người dùng thành công",
+            "data": UserSerializer(user).data
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        traceback.print_exc()
+        return Response({
+            "success": False,
+            "error": "Đã xảy ra lỗi khi cập nhật thông tin người dùng",
+            "detail": str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+# @SchemaFactory.get_schema(
+#     success_response={
+#         "success": True,
+#         "message": "User information retrieved successfully",
+#         "data": {
+#             "_id": "681516ff88db30c4bebe9018",
+#             "name": "Nguyễn Văn A",
+#             "dob": "1990-01-01",
+#             "gender": "male",
+#             "email": "user@example.com",
+#             "role": "user",
+#             "profile_pic": "https://example.com/profile-images/user123.jpg"
+#         }
+#     },
+#     error_responses=[ 
+#         {
+#             "name": "User not found",
+#             "response": {"error": "User not found"},
+#             "status_code": 404
+#         }
+#     ],
+#     description="Get user information by user ID",
+# )
+@api_view(['GET'])
+@permission_classes([AllowAny])  # Only authenticated users can access
+def get_user_by_id(request , user_id=None):
+    try:
+        # Use _id field to query the MongoDB database
+        user = User.objects.get(_id=ObjectId(user_id))
+        
+        # Return the user data using the serializer
+        return Response({
+            "success": True,
+            "message": "User information retrieved successfully",
+            "data": UserSerializer(user).data
+        }, status=status.HTTP_200_OK)
+    
+    except User.DoesNotExist:
+        return Response({
+            "success": False,
+            "error": "User not found"
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    except Exception as e:
+        traceback.print_exc()
+        return Response({
+            "success": False,
+            "error": "An error occurred while retrieving user information",
+            "detail": str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
