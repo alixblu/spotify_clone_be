@@ -27,3 +27,6 @@ backend/metadata
 # Pycache and pyc files
 __pycache__/
 *.pyc
+
+# Media
+backend/media/

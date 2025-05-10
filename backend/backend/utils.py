@@ -169,7 +169,7 @@ from drf_spectacular.utils import (
     OpenApiTypes
 )
 from rest_framework import status
-from typing import Optional, Dict, List, Any
+from typing import Optional, Dict, List, Any, Union
 
 
 class SchemaFactory:
@@ -373,23 +373,41 @@ class SchemaFactory:
 
     @staticmethod
     def delete_schema(
-        item_id_param: str = 'id',
+        item_id_params: Union[str, List[str]] = 'id',  # Chấp nhận cả string hoặc list
         success_response: Optional[Dict] = None,
         error_responses: Optional[List[Dict]] = None,
         description: str = "",
         response_serializer=None
     ):
-        """Tạo schema cho DELETE API"""
+        """Tạo schema cho DELETE API hỗ trợ nhiều tham số URL
+        
+        Args:
+            item_id_params: Có thể là:
+                - String: 'id' (mặc định)
+                - List: ['album_id', 'song_id'] (cho nhiều tham số)
+            ... các tham số khác giữ nguyên
+        """
+        # Chuẩn hóa thành list dù đầu vào là string hay list
+        params = [item_id_params] if isinstance(item_id_params, str) else item_id_params
+        
+        # Tạo danh sách các path parameters
+        path_params = [{
+            'name': param,
+            'description': f'ID of the {param.replace("_id", "")}',  # Mô tả tự động
+            'required': True,
+            'schema': {
+                'type': 'string',
+                'example': '507f1f77bcf86cd799439011' if 'id' in param else '60d5ec9cf8a1b4626e7d4e92'
+            }
+        } for param in params]
+        
         return SchemaFactory._base_schema(
             success_response=success_response,
             error_responses=error_responses,
             description=description,
             response_serializer=response_serializer,
             method='DELETE',
-            path_params=[{
-                'name': item_id_param,
-                'description': 'ID of the item to delete'
-            }]
+            path_params=path_params  # Truyền danh sách các params
         )
 
     @staticmethod

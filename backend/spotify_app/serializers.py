@@ -29,3 +29,8 @@ class PlaylistSongSerializer(serializers.ModelSerializer):
         model = PlaylistSong
         # fields = ['_id', 'playlist', 'song', 'added_at']
         fields = '__all__'
+
+class ArtistSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Artist
+        fields = '__all__'

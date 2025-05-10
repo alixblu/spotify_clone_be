@@ -262,7 +262,8 @@ def get_user_list(request):
 
 
 
-@SchemaFactory.post_schema(
+@SchemaFactory.update_schema(
+    item_id_param="_id",  # Thêm tham số _id trong URL
     request_example={
         "name": "Nguyễn Văn B",
         "dob": "1992-05-15",
@@ -293,20 +294,24 @@ def get_user_list(request):
             "name": "Lỗi xác thực",
             "response": {"error": "Bạn không có quyền cập nhật thông tin người dùng này"},
             "status_code": 403
+        },
+        {
+            "name": "Lỗi server",
+            "response": {"error": "Đã xảy ra lỗi khi cập nhật thông tin người dùng"},
+            "status_code": 500
         }
     ],
     description="Cập nhật thông tin người dùng (name, dob, gender, password, profile_pic)",
     request_serializer=UserSerializer
 )
-
 @api_view(['PUT'])
 @permission_classes([AllowAny])
-def update_user(request, user_id=None):
-    print(f"Received request for user_id: {user_id}")  # Debugging line
+def update_user(request, _id=None):
+    print(f"Received request for user_id: {_id}")  # Debugging line
     try:
         # Use _id field in the query for MongoDB (Djongo)
         try:
-            user = User.objects.get(_id=ObjectId(user_id))# Searching by _id, not id
+            user = User.objects.get(_id=ObjectId(_id))# Searching by _id, not id
             print(f"User found: {user}")
         except User.DoesNotExist:
             return Response({
@@ -341,36 +346,23 @@ def update_user(request, user_id=None):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-
-# @SchemaFactory.get_schema(
-#     success_response={
-#         "success": True,
-#         "message": "User information retrieved successfully",
-#         "data": {
-#             "_id": "681516ff88db30c4bebe9018",
-#             "name": "Nguyễn Văn A",
-#             "dob": "1990-01-01",
-#             "gender": "male",
-#             "email": "user@example.com",
-#             "role": "user",
-#             "profile_pic": "https://example.com/profile-images/user123.jpg"
-#         }
-#     },
-#     error_responses=[ 
-#         {
-#             "name": "User not found",
-#             "response": {"error": "User not found"},
-#             "status_code": 404
-#         }
-#     ],
-#     description="Get user information by user ID",
-# )
+@SchemaFactory.list_schema(
+    item_example={
+        "_id": "507f1f77bcf86cd799439011",
+        "name": "Nguyễn Văn A",
+        "email": "user@example.com",
+        "role": "user"
+    },
+    description="Lấy thông tin chi tiết người dùng bằng _id",
+    pagination=False,  # Tắt phân trang vì đây là API get single item
+    search_fields=None  # Không cần search fields
+)
 @api_view(['GET'])
 @permission_classes([AllowAny])  # Only authenticated users can access
-def get_user_by_id(request , user_id=None):
+def get_user_by_id(request , _id=None):
     try:
         # Use _id field to query the MongoDB database
-        user = User.objects.get(_id=ObjectId(user_id))
+        user = User.objects.get(_id=ObjectId(_id))
         
         # Return the user data using the serializer
         return Response({

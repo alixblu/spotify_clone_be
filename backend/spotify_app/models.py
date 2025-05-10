@@ -33,7 +33,7 @@ class Artist(models.Model):
     
 class Album(models.Model):
     _id = models.ObjectIdField(primary_key=True, auto_created=True)
-    artist_id = models.ForeignKey(Artist, on_delete=models.CASCADE)
+    artist = models.ForeignKey(Artist, on_delete=models.CASCADE)
     album_name = models.CharField(max_length=255)
     artist_name = models.CharField(max_length=255)
     cover_img = models.URLField(blank=True, null=True)
@@ -53,6 +53,8 @@ class Song(models.Model):
     album_id = models.ForeignKey(Album, on_delete=models.CASCADE, blank=True, null=True)
     title = models.CharField(max_length=255)
     duration = models.TimeField()
+    # Tạm thời gắn FileField cho video, audio và img, 
+    # Sau này thay FileField bằng URLField/CharField để lưu URL từ Cloudinary
     video_file = models.FileField(upload_to='videos/', blank=True, null=True)
     audio_file = models.FileField(upload_to='audios/', blank=True, null=True)
     img = models.URLField(blank=True, null=True)

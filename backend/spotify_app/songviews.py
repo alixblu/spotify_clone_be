@@ -6,7 +6,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from spotify_app.permissionsCustom import IsAdminUser
-from .models import Song
+from .models import Song, Album
 from .serializers import SongSerializer
 from mutagen.mp3 import MP3
 from bson import ObjectId
@@ -70,6 +70,7 @@ def upload_song(request):
 
     audio_blob = request.FILES.get('audio_file')
     video_blob = request.FILES.get('video_file')
+    # image_blob = request.FILES.get('img')
 
     # print(f"DEBUG: audio_file received - {audio_blob}")
     # print(f"DEBUG: video_file received - {video_blob}")
@@ -80,6 +81,14 @@ def upload_song(request):
     # Process duration
     audio_duration = get_audio_duration(audio_blob) if audio_blob else None
     song_duration = format_duration(audio_duration)
+    # 2. Xử lý album_id
+    album_id = request.data.get('album_id')
+    album = None
+    if album_id:
+        try:
+            album = Album.objects.get(_id=album_id)
+        except (Album.DoesNotExist, ValueError):
+            return Response({"error": "Invalid album_id"}, status=400)
 
     song_data = {
         'title': request.data.get('title'),
@@ -150,12 +159,41 @@ from rest_framework.response import Response
 from bson import ObjectId
 
 
+# Lấy bài hat trong album
+@SchemaFactory.list_schema(
+    item_example={  # Truyền item_example thay vì success_response
+        "_id": "507f1f77bcf86cd799439011",
+        "title": "Bài hát mẫu",
+        "duration": "00:03:45",
+        "audio_file": "https://cloudinary.com/audio.mp3",
+        "album_id": "60d5ec9cf8a1b4626e7d4e92"
+    },
+    description="Get all songs belonging to a specific album",
+    pagination=True  # Bật phân trang nếu cần
+)
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_songs_by_album(request, album_id):
+    try:
+        songs = Song.objects.filter(album_id=ObjectId(album_id), isHidden=False)
+        serializer = SongSerializer(songs, many=True)
+        
+        return Response({
+            "results": serializer.data,  # Khớp với cấu trúc trong item_example
+            "count": len(serializer.data),
+            "next": None,
+            "previous": None
+        })
+        
+    except Exception as e:
+        return Response({"error": str(e)}, status=400)
+
 # 4. Update Song API
 @SchemaFactory.update_schema(
     item_id_param="song_id",
     request_example={
         "title": "Tên bài hát mới",
-        "img": "https://example.com/new_image.jpg"
+        "img": "https://example.com/image.jpg"
     },
     success_response={
         "message": "Song updated!",
@@ -173,31 +211,33 @@ from bson import ObjectId
     request_serializer=SongSerializer
 )
 @api_view(['PUT'])
+@parser_classes([MultiPartParser, FormParser])
 @permission_classes([IsAdminUser])
 def update_song(request, song_id):
     try:
-        # Ensure song_id is a valid ObjectId
-        try:
-            song = Song.objects.get(_id=ObjectId(song_id))
-        except (Song.DoesNotExist, ValueError):
-            return Response({"error": "Invalid Song ID or Song not found"}, status=404)
+        song = Song.objects.get(_id=ObjectId(song_id))
+        # image_blob = request.FILES.get('img')  # Nhận file từ request
 
-        # Validate and update song data
+        # # Nếu có file ảnh mới, upload lên Cloudinary
+        # if image_blob:
+        #     song.img = image_blob
+
+        # Cập nhật các trường khác
         serializer = SongSerializer(song, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response({"message": "Song updated!", "data": serializer.data}, status=200)
-        else:
-            return Response(serializer.errors, status=400)
+        return Response(serializer.errors, status=400)
 
+    except Song.DoesNotExist:
+        return Response({"error": "Song not found"}, status=404)
     except Exception as e:
-        print(f"ERROR: {str(e)}")  # Debug logs
-        return Response({"error": "Internal Server Error"}, status=500)
+        return Response({"error": str(e)}, status=500)
     
 
 # 5. Delete Song API
 @SchemaFactory.delete_schema(
-    item_id_param="song_id",
+    item_id_params="song_id",
     success_response={
         "message": "Song deleted successfully!",
         "deleted_id": "507f1f77bcf86cd799439011"
@@ -278,3 +318,51 @@ def unhide_song(request, song_id):
 
     except Exception as e:
         print(f"ERROR: {str(e)}")
+
+
+# Xóa bài hát trong album
+@SchemaFactory.delete_schema(
+    item_id_params=["album_id", "song_id"],  # Thay đổi thành danh sách các param
+    success_response={
+        "message": "Song deleted successfully!",
+        "deleted_id": "507f1f77bcf86cd799439011",
+        "album_id": "60d5ec9cf8a1b4626e7d4e92"  # Thêm album_id vào response mẫu
+    },
+    error_responses=[
+        {
+            "name": "Not Found",
+            "response": {"error": "Song not found in specified album"},
+            "status_code": 404
+        },
+        {
+            "name": "Invalid ID",
+            "response": {"error": "Invalid song_id or album_id format"},
+            "status_code": 400
+        }
+    ],
+    description="Delete a song from specific album permanently. Requires both album_id and song_id."
+)
+@api_view(['DELETE'])
+@permission_classes([IsAdminUser])
+def delete_song_inAlbum(request, album_id, song_id):
+    try:
+        song = Song.objects.get(
+            _id=ObjectId(song_id),
+            album_id=ObjectId(album_id)  # Kiểm tra song thuộc album
+        )
+        song.delete()
+        return Response({
+            "message": "Song deleted successfully!",
+            "deleted_id": song_id,
+            "album_id": album_id  # Trả về cả album_id
+        })
+    except Song.DoesNotExist:
+        return Response(
+            {"error": "Song not found in specified album"}, 
+            status=404
+        )
+    except ValueError:
+        return Response(
+            {"error": "Invalid song_id or album_id format"},
+            status=400
+        )
