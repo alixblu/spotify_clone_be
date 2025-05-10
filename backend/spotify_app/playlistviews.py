@@ -195,7 +195,7 @@ def update_playlist(request, playlist_id):
 
 # API để xóa playlist
 @SchemaFactory.delete_schema(
-    item_id_param="playlist_id",
+    item_id_params="playlist_id",
     success_response={"message": "Playlist deleted successfully"},
     error_responses=[
         {
