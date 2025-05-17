@@ -224,7 +224,7 @@ class SchemaFactory:
                 examples.append(
                     OpenApiExample(
                         err.get('name', 'Error Response'),
-                        value=err['response'],
+                        value = err.get('response', 'Unknown error'),
                         response_only=True,
                         status_codes=[str(err['status_code'])]
                     )

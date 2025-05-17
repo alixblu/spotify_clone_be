@@ -23,8 +23,31 @@ class AllowAny(BasePermission):
     
 class IsAuthenticated(BasePermission):
     """
-    Allows access only to authenticated users.
+    Cho phép truy cập chỉ với người dùng đã đăng nhập.
     """
 
     def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated)
+        print("request.user.is_authenticated:", request.user.is_authenticated)
+        # Kiểm tra xem người dùng đã đăng nhập chưa
+        if request.user.is_authenticated:
+            return True
+        return False
+
+# Dùng để kiểm tra quyền truy cập của người dùng trong các view, hàm này gọi lại từ middleware
+class AuthenticatedUserWrapper:
+    def __init__(self, user, payload=None):
+        self._user = user
+        self._payload = payload or {}
+        self._id = user._id
+        self.email = user.email
+        self.role = user.role
+
+    def __getattr__(self, attr):
+        return getattr(self._user, attr)
+
+    @property
+    def is_authenticated(self):
+        return True
+
+
+

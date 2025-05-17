@@ -6,6 +6,7 @@ import uuid
 from rest_framework.exceptions import AuthenticationFailed
 from .models import User  
 from bson import ObjectId  
+from spotify_app.permissionsCustom import AuthenticatedUserWrapper
 
 class JWTAuthMiddleware:
 
@@ -83,16 +84,28 @@ class JWTAuthMiddleware:
                 raise AuthenticationFailed("Token missing")
 
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-            user = User.objects.get(_id=ObjectId(payload["_id"]))  # Sử dụng _id
-            print(f"User authenticated: {user}")  # In thông tin người dùng để kiểm tra
-            user.role = payload.get("role")
-            request.role = user.role  # Gán role cho request
-            request.user = user
+            # user = User.objects.get(_id=ObjectId(payload["_id"]))  # Sử dụng _id
+            # print(f"User authenticated: {user}")  # In thông tin người dùng để kiểm tra
+            # user.role = payload.get("role")
+            # request.role = user.role  # Gán role cho request
+            # request.user = user
+            # request.auth = payload
+            # request.user.is_authenticated = True
+            # print("request", request)  # In thông tin người dùng
+            # print("request.user:", request.user)  # In thông tin người dùng trong request
+            # print("request.role:", request.role) 
+            user = User.objects.get(_id=ObjectId(payload["_id"]))  # Lấy user từ MongoDB
+            wrapped_user = AuthenticatedUserWrapper(user, payload)
+            request._user = wrapped_user
+            request.role = wrapped_user.role
             request.auth = payload
-            request.user.is_authenticated = True
-            print("request", request)  # In thông tin người dùng
-            print("request.user:", request.user)  # In thông tin người dùng trong request
-            print("request.role:", request.role) 
+            print ("request.user:", request._user)  # In thông tin người dùng trong request
+            print ("request.role:", request.role)
+            print ("request.auth:", request.auth)  # In thông tin người dùng trong request
+            print ("request.user.is_authenticated:", request._user.is_authenticated)  # In thông tin người dùng trong request
+            # Debug
+            print("Middleware - Authenticated user:", wrapped_user)
+            print("Middleware - request.user.is_authenticated:", wrapped_user.is_authenticated)
             # Debug
             print(f"Middleware - User role: {user.role}, Type: {type(user.role)}")
 
