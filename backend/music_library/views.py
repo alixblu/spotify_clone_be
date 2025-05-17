@@ -293,6 +293,83 @@ def get_favorite_songs(request, user_id):
     return Response(serializer.data)
 
 
+# Lấy tổng số bài hát yêu thích của người dùng
+@SchemaFactory.retrieve_schema(
+    item_id_param='user_id',
+    success_response={
+        "name": "Bài hát đã thích",
+        "description": "Tổng số bài hát đã thích: 5",
+        "total": 5,
+        "songs": [
+            {
+                "_id": "507f1f77bcf86cd799439011",
+                "title": "Tên bài hát 1"
+            },
+            {
+                "_id": "507f1f77bcf86cd799439012",
+                "title": "Tên bài hát 2"
+            }
+        ]
+    },
+    error_responses=[
+        {
+            "name": "Không tìm thấy",
+            "response": {"error": "User not found."},
+            "status_code": 404
+        }
+    ],
+    description="Lấy tổng số bài hát yêu thích và danh sách bài hát của người dùng",
+    serializer=FavoriteSongSerializer
+)
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_favorite_songs_summary(request, user_id):
+    """
+    Lấy tổng số bài hát yêu thích và danh sách bài hát của người dùng (public)
+    """
+    try:
+        # Validate user_id
+        if not ObjectId.is_valid(user_id):
+            return Response({"error": "Invalid user ID format."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user_obj_id = ObjectId(user_id)
+
+        # Check if user exists
+        if not User.objects.filter(_id=user_obj_id).exists():
+            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Get favorite songs with related song data
+        favorite_songs = FavoriteSong.objects.select_related('song').filter(user_id=user_obj_id)
+        total_songs = favorite_songs.count()
+
+        # Prepare song data with proper ObjectId serialization
+        songs_data = []
+        for fav_song in favorite_songs:
+            song = fav_song.song
+            songs_data.append({
+                "_id": str(song._id),
+                "title": song.title,
+                # "artist": song.artist.name if hasattr(song, 'artist') else None,
+            })
+
+        response_data = {
+            "success": True,
+            "name": "Bài hát đã thích",
+            "description": total_songs,
+            "total": total_songs,
+            "songs": songs_data
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        return Response(
+            {"error": "Đã xảy ra lỗi khi xử lý yêu cầu"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
 #  Thêm bài hát vào danh sách yêu thích
 @SchemaFactory.post_schema(
     item_id_param="user_id",

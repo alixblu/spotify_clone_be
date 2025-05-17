@@ -34,3 +34,12 @@ class ArtistSerializer(serializers.ModelSerializer):
     class Meta:
         model = Artist
         fields = '__all__'
+
+class FollowSerializer(serializers.ModelSerializer):
+    follower_id = serializers.CharField()
+    target_id = serializers.CharField()
+    target_type = serializers.ChoiceField(choices=['user', 'artist'])
+
+    class Meta:
+        model = Follow
+        fields = '__all__'

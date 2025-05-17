@@ -11,6 +11,7 @@ urlpatterns = [
     path('favorite_songs/<str:user_id>/', views.get_favorite_songs, name='get_favorite_songs'),
     path('favorite_songs/<str:user_id>/create', views.create_favorite_songs, name='add_favorite_song'),
     path('favorite_songs/<str:user_id>/<str:song_id>/delete/', views.delete_favorite_song, name='delete_favorite_song'),
+    path('favorite_songs/<str:user_id>/favorite/songs/summary/', views.get_favorite_songs_summary, name='check_favorite_song'),
     # FAVORITE ALBUM
     path('favorite_albums/<str:user_id>/', views.get_favorite_albums, name='get_favorite_albums'),
     path('favorite_albums/<str:user_id>/create', views.create_favorite_album, name='add_favorite_album'),
