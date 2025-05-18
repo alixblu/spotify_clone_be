@@ -70,6 +70,7 @@ class JWTAuthMiddleware:
             # Spotify app API
             # '/spotify_app/songs/',
             
+            
         ]
 
     def __call__(self, request):

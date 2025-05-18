@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'user_management',
     'spotify_api',
     'music_library',
+    'chatting'
 ]
 
 
@@ -112,7 +113,7 @@ DATABASES = {
         'ENGINE': 'djongo',
         'NAME': 'spotify_database',  # Replace with your MongoDB database name
         'HOST': 'localhost',         # MongoDB server address
-        'PORT': 27017,               # Default MongoDB port
+        'PORT': '27017',               # Default MongoDB port
         'ENFORCE_SCHEMA': False,       # Set to False if you don't want to enforce schema
     }
 }

@@ -3,6 +3,7 @@ import sys
 
 def runmigration():
     try:
+        os.system("python backend/database.py")
         # Running migrations
         os.system("python manage.py makemigrations")
         os.system("python manage.py migrate")
