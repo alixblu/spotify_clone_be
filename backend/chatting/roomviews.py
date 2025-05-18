@@ -85,9 +85,23 @@ def create_room(request):
                 updated_at=timezone.now(),
                 is_active=True
             )
+            
+            # Add the host to the room's users list
+            room.users.add(host_user)
+            room.save()
+
             return Response({
                 "message": "Room created successfully.",
-                "room_id": str(room._id)
+                "room_id": str(room._id),
+                "name": room.name,
+                "description": room.description,
+                "host": {
+                    "_id": str(room.host._id),
+                    "name": room.host.name,
+                },
+                "created_at": room.created_at.isoformat(),
+                "is_active": room.is_active,
+                "is_host": True
             }, status=status.HTTP_201_CREATED)
         except Exception as e:
             import traceback
@@ -384,4 +398,91 @@ def delete_room(request, room_id):
 
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@SchemaFactory.list_schema(
+    item_example={
+        "_id": "507f1f77bcf86cd799439011",
+        "name": "Music Chat",
+        "description": "A room to discuss music trends and artists.",
+        "host": {
+            "_id": "507f1f77bcf86cd799439012",
+            "name": "john_doe"
+        },
+        "created_at": "2025-05-18T08:30:00Z",
+        "is_active": True
+    },
+    description="Get all rooms that a user is participating in",
+    pagination=True
+)
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_user_rooms(request):
+    """
+    Get all rooms that a user is participating in.
+    """
+    try:
+        user_id = request.query_params.get('user_id')
+        print(f"Received request for user_id: {user_id}")
+        
+        if not user_id:
+            return Response({"error": "User ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(_id=ObjectId(user_id))
+            print(f"Found user: {user.name}")
+        except User.DoesNotExist:
+            print(f"User not found with ID: {user_id}")
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            print(f"Error finding user: {str(e)}")
+            return Response({"error": f"Error finding user: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Get all rooms where the user is either a member or the host
+        try:
+            rooms = ChatRoom.objects.filter(users=user).order_by('-created_at')
+            print(f"Found {rooms.count()} rooms for user")
+        except Exception as e:
+            print(f"Error querying rooms: {str(e)}")
+            return Response({"error": f"Error querying rooms: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Apply pagination
+        paginator = LimitOffsetPagination()
+        try:
+            paginated_rooms = paginator.paginate_queryset(rooms, request)
+        except Exception as e:
+            print(f"Error paginating rooms: {str(e)}")
+            return Response({"error": f"Error paginating rooms: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Format response
+        try:
+            room_list = [{
+                "_id": str(room._id),
+                "name": room.name,
+                "description": room.description,
+                "host": {
+                    "_id": str(room.host._id),
+                    "name": room.host.name
+                },
+                "created_at": room.created_at.isoformat(),
+                "is_active": room.is_active,
+                "is_host": str(room.host._id) == user_id
+            } for room in paginated_rooms]
+
+            response_data = {
+                "count": rooms.count(),
+                "next": paginator.get_next_link(),
+                "previous": paginator.get_previous_link(),
+                "results": room_list
+            }
+            print(f"Returning response with {len(room_list)} rooms")
+            return Response(response_data)
+        except Exception as e:
+            print(f"Error formatting response: {str(e)}")
+            return Response({"error": f"Error formatting response: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    except Exception as e:
+        import traceback
+        print(f"Unexpected error in get_user_rooms: {str(e)}")
+        print(traceback.format_exc())
+        return Response({"error": f"Unexpected error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
