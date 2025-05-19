@@ -146,7 +146,7 @@ def login(request):
             value=refresh_token,
             httponly=True,
             secure=False,
-            samesite="Lax",
+            samesite="Lax",  
             max_age=int(timedelta(days=7).total_seconds())
         )
 

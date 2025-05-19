@@ -166,6 +166,7 @@ def get_songs_in_playlist(request, playlist_id):
             })
 
         response_data = {
+            "success": True,
             "playlist_id": str(playlist._id),
             "user_id": str(playlist.user_id),
             "playlist_title": playlist.name,

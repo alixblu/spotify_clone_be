@@ -78,6 +78,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
@@ -193,7 +194,8 @@ from datetime import timedelta
 
 SIMPLE_JWT = {
     # Thời gian sống của access token (50 phút cho bảo mật cao)
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=50), 
+    # refesh token ở fe call bị lỗi, nên tạm thời cho token sống lâu luôn
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=500), 
     
     # Thời gian sống của refresh token (7 ngày)
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
