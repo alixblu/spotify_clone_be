@@ -147,6 +147,72 @@ def get_playlist_by_id(request, playlist_id):
         }, status=500)
     
 
+# API để lấy danh sách tất cả playlist của user_id
+@SchemaFactory.retrieve_schema(
+    item_id_param='user_id',
+    success_response={
+        "_id": "string",
+        "title": "My Playlist",
+        "description": "A great playlist",
+        "user_id": "string"
+    },
+    error_responses=[
+        {
+            "name": "Invalid ID",
+            "response": {"error": "Invalid user ID format"},
+            "status_code": 400
+        },
+        {
+            "name": "Not Found",
+            "response": {"error": "User not found"},
+            "status_code": 404
+        }
+    ],
+    description="Lấy danh sách tất cả playlist của người dùng theo user_id",
+    serializer=PlaylistSerializer(many=True)
+)
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_alls_playlists_by_user(request, user_id):
+    try:
+        # Validate user_id
+        if not ObjectId.is_valid(user_id):
+            return Response({"error": "Invalid user ID format"}, status=400)
+
+        user_obj_id = ObjectId(user_id)
+
+        # Check if user exists
+        if not User.objects.filter(_id=user_obj_id).exists():
+            return Response({"error": "User not found"}, status=404)
+
+        # Get playlists with manual serialization
+        playlists = Playlist.objects.filter(user_id=user_obj_id)
+        
+        # Manually serialize each playlist
+        playlists_data = []
+        for playlist in playlists:
+            playlists_data.append({
+                '_id': str(playlist._id),
+                'title': playlist.name,
+                'description': len(playlists_data),
+                'image': playlist.cover_img,
+                'user_id': str(playlist.user_id),
+                
+            })
+
+        return Response({
+            "success": True,
+            "count": len(playlists_data),
+            "data": playlists_data
+        })
+
+    except Exception as e:
+        return Response({
+            "success": False,
+            "error": str(e)
+        }, status=500)
+    
+
 # API để cập nhật thông tin playlist
 @SchemaFactory.update_schema(
     item_id_param="playlist_id",

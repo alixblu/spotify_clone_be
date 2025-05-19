@@ -21,6 +21,15 @@ def run_daphne():
     ])
 
 if __name__ == '__main__':
+    # Set Django settings module
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+
+    # Run migrations
+    print("Running database migrations...")
+    os.system("python backend/database.py")
+    os.system("python manage.py makemigrations")
+    os.system("python manage.py migrate")
+    print("Migrations completed.")
     # Start Django server
     django_thread = Thread(target=run_django)
     django_thread.daemon = True

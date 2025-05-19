@@ -1,66 +1,3 @@
-# from rest_framework.decorators import api_view, permission_classes
-# from rest_framework.response import Response
-# from rest_framework import status
-# from bson import ObjectId
-# from django.core.exceptions import ValidationError
-# from .models import Playlist, Song
-# from music_library.models import PlaylistSong
-# from rest_framework.permissions import AllowAny
-
-# @api_view(['POST'])
-# @permission_classes([AllowAny])
-# def add_songs_to_playlist(request, playlist_id):
-#     try:
-#         # Validate playlist_id
-#         playlist_id = ObjectId(playlist_id)
-#         playlist = Playlist.objects.get(_id=playlist_id)
-#         print(f"DEBUG: Playlist found - {playlist}")
-#     except (Playlist.DoesNotExist, ValueError):
-#         return Response({"error": "Playlist not found or invalid ID"}, status=status.HTTP_404_NOT_FOUND)
-
-#     song_ids = request.data.get('song_ids', [])
-#     if not isinstance(song_ids, list):
-#         return Response({"error": "song_ids must be a list"}, status=status.HTTP_400_BAD_REQUEST)
-
-#     added_songs = []
-#     errors = []
-#     # Cho thêm 1 lần nhiều bài hát vào playlist, nhưng hiện tại đang lỗi chỉ thêm được 1 bài mỗi lần
-#     for song_id in song_ids:
-#         try:
-#             print(f"DEBUG: Adding song ID - {song_id}")
-#             song_id_obj = ObjectId(song_id)
-#             song = Song.objects.get(_id=song_id_obj)
-#             print(f"DEBUG: Song found - {song}")
-#             # Sử dụng get_or_create để tránh lỗi duplicate
-#             playlist_song, created = PlaylistSong.objects.get_or_create(
-#                 playlist=playlist,
-#                 song=song
-#             )
-            
-#             if created:
-#                 added_songs.append(str(song_id))
-#             else:
-#                 errors.append(f"Song {song_id} already exists in playlist")
-#             print(f"DEBUG: added_songs created - {added_songs}")
-#         except (Song.DoesNotExist, ValueError) as e:
-#             errors.append(f"Invalid song ID {song_id}: {str(e)}")
-#             continue
-#         except Exception as e:
-#             errors.append(f"Error adding song {song_id}: {str(e)}")
-#             continue
-
-#     response_data = {
-#         "added_count": len(added_songs),
-#         "added_songs": added_songs,
-#         "errors": errors,
-#         "message": f"Successfully added {len(added_songs)} songs" if added_songs else "No songs were added"
-#     }
-
-#     return Response(response_data, status=status.HTTP_200_OK if added_songs else status.HTTP_207_MULTI_STATUS)
-
-
-
-
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -162,3 +99,88 @@ def add_songs_to_playlist(request, playlist_id):
     else:
         # Nếu dữ liệu không hợp lệ, trả về thông báo lỗi
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# Lấy danh sách bài hát trong playlist
+@SchemaFactory.retrieve_schema(
+    item_id_param='playlist_id',
+    success_response={
+        "playlist_id": "string",
+        "playlist_title": "string",
+        "total_songs": 0,
+        "songs": [
+            {
+                "_id": "string",
+                "title": "string",
+                "artist": "string"
+            }
+        ]
+    },
+    error_responses=[
+        {
+            "name": "Invalid Playlist ID",
+            "response": {"error": "Invalid playlist ID format"},
+            "status_code": 400
+        },
+        {
+            "name": "Playlist Not Found",
+            "response": {"error": "Playlist not found"},
+            "status_code": 404
+        }
+    ],
+    description="Lấy tổng số bài hát trong playlist",
+    serializer=PlaylistSongSerializer
+)
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_songs_in_playlist(request, playlist_id):
+    try:
+        # Validate playlist_id
+        if not ObjectId.is_valid(playlist_id):
+            return Response({"error": "Invalid playlist ID format"}, status=status.HTTP_400_BAD_REQUEST)
+
+        playlist_obj_id = ObjectId(playlist_id)
+
+        # Check if playlist exists
+        playlist = Playlist.objects.get(_id=playlist_obj_id)
+        
+        # Get all songs in playlist
+        playlist_songs = PlaylistSong.objects.filter(playlist=playlist_obj_id).select_related('song')
+        total_songs = playlist_songs.count()
+        
+        # Prepare songs data
+        songs_data = []
+        for ps in playlist_songs:
+            song = ps.song
+            songs_data.append({
+                "_id": str(song._id),
+                "album_id": str(song.album_id_id),
+                "title": song.title,
+                "duration": str(song.duration),
+                "video_file": str(song.video_file) if song.video_file else None,
+                "audio_file": str(song.audio_file) if song.audio_file else None,
+                "img": str(song.img) if song.img else None,
+                "isfromDB": song.isfromDB,
+                "created_at": song.created_at,
+                "isHidden": song.isHidden,
+            })
+
+        response_data = {
+            "playlist_id": str(playlist._id),
+            "user_id": str(playlist.user_id),
+            "playlist_title": playlist.name,
+            "image": str(playlist.cover_img),
+            "total_songs": total_songs,
+            "songs": songs_data
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
+
+    except Playlist.DoesNotExist:
+        return Response({"error": "Playlist not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        return Response(
+            {"error": "An error occurred while processing your request"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

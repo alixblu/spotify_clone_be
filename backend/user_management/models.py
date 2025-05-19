@@ -1,8 +1,9 @@
 import bcrypt
 from djongo import models
+from bson import ObjectId
 
 class User(models.Model):
-    _id = models.ObjectIdField(primary_key=True, auto_created=True)
+    _id = models.ObjectIdField(primary_key=True, default=ObjectId, auto_created=True)
     name = models.CharField(max_length=100)
     dob = models.DateField(null=True, blank=True)
     gender = models.CharField(max_length=10)

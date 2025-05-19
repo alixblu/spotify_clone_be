@@ -151,7 +151,7 @@ def create_artist(request):
 @permission_classes([AllowAny])
 def update_artist(request, artist_id):
     try:
-        artist = Artist.objects.get(id=artist_id)
+        artist = Artist.objects.get(_id=ObjectId(artist_id))
     except Artist.DoesNotExist:
         return Response({"error": "Artist not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -171,17 +171,20 @@ def update_artist(request, artist_id):
     description="Xóa nghệ sĩ"
 )
 @api_view(['DELETE'])
-@permission_classes([AllowAny])
+@permission_classes([AllowAny])  # Thay bằng IsAuthenticated nếu cần
 def delete_artist(request, artist_id):
     try:
-        artist = Artist.objects.get(id=artist_id)
+        artist = Artist.objects.get(_id=ObjectId(artist_id))
         artist.delete()
-        return Response({"message": "Artist deleted successfully"}, status=status.HTTP_200_OK)
+        print(f"Deleted artist with ID: {artist_id}")  # Log để debug
+        return Response({"message": "Artist deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
     except Artist.DoesNotExist:
         return Response({"error": "Artist not found"}, status=status.HTTP_404_NOT_FOUND)
-    except Exception:
-        return Response({"error": "Error deleting artist"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+    except ValueError:
+        return Response({"error": "Invalid artist ID"}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        print(f"Error deleting artist: {str(e)}")
+        return Response({"error": "Internal server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # Lấy danh sách album của nghệ sĩ
 @SchemaFactory.list_schema(

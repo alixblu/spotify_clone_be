@@ -10,6 +10,7 @@ sqlparse==0.2.4  # Required by djongo 1.3.6
 
 # MongoDB
 pymongo==3.12.3
+Pillow>=10.0.0
 
 # Deployment tools
 whitenoise==6.5.0
