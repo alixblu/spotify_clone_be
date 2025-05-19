@@ -101,9 +101,23 @@ def create_album(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def list_albums(request):
-    albums = Album.objects.all()
-    serializer = AlbumSerializer(albums, many=True)
-    return Response(serializer.data)
+    """ Retrieve all albums """
+    try:
+        albums = Album.objects.all()
+        serializer = AlbumSerializer(albums, many=True)
+        data = serializer.data
+        
+        # Convert ObjectId to string for each album
+        for album in data:
+            album['_id'] = str(album['_id'])
+            album['artist'] = str(album['artist'])
+            
+        return Response(data)
+    except Exception as e:
+        return Response(
+            {"error": f"Error retrieving albums: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
 # 3. Get Album Detail API
