@@ -5,6 +5,7 @@ from . import playlistviews
 from . import playlist_songviews
 from . import artistviews
 from . import followviews
+app_name = 'spotify_app'
 urlpatterns = [
     # SONG
     path('songs/', songviews.list_songs, name='list_songs'),
@@ -17,11 +18,17 @@ urlpatterns = [
     path('albums/<str:album_id>/songs/<str:song_id>/delete', songviews.delete_song_inAlbum, name='delete_song'),
     path('songs/get_songs_by_album/<str:album_id>', songviews.get_songs_by_album, name='get_songs_by_album'),
     # ALBUM
-    path('albums/', albumviews.list_albums, name='list_albums'),
-    path('albums/create/', albumviews.create_album, name='create_album'),
-    path('albums/<str:album_id>/', albumviews.get_album, name='get_album'),
-    path('albums/<str:album_id>/update/', albumviews.update_album, name='update_album'),
-    path('albums/<str:album_id>/delete/', albumviews.delete_album, name='delete_album'),
+
+    path('albums/', albumviews.list_albums, name='list_albums'),  # Lấy tất cả album
+    path('albums/create/', albumviews.create_album, name='create_album'),  # Tạo album mới
+    path('albums/<str:album_id>/', albumviews.get_album, name='get_album'),  # Lấy chi tiết album
+    path('albums/<str:albumId>/update/', albumviews.update_album, name='update_album'),
+  # Cập nhật album
+    path('albums/<str:album_id>/delete/', albumviews.delete_album, name='delete_album'),  # Xóa album
+    # path('albums/<str:album_id>/hide/', albumviews.hide_album, name='hide_album'),  # Ẩn album
+    # path('albums/<str:album_id>/unhide/', albumviews.unhide_album, name='unhide_album'),  # Hiện album
+    # path('albums/artist/<str:artist_id>/', albumviews.get_albums_by_artist, name='get_albums_by_artist'),  # Lấy album theo nghệ sĩ
+
     # PLAYLIST
     path('playlists/getalls/<str:user_id>/', playlistviews.get_alls_playlists_by_user, name='get_all_playlists'),
     path('playlists/create', playlistviews.create_playlist, name='create_playlist'),

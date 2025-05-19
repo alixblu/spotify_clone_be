@@ -10,6 +10,7 @@ sqlparse==0.4.4
 
 # For working with MongoDB
 pymongo==3.12.3
+Pillow>=10.0.0
 
 # Additional libraries for frontend integration and tools
 # djangorestframework>=3.14.0
