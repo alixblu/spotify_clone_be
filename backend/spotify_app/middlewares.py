@@ -67,6 +67,8 @@ class JWTAuthMiddleware:
             '/admin/',
             # spotify api
             '/spotify_api/',
+            # spotify app
+            '/spotify_app/',
             # WebSocket
             '/ws/',
         ]
