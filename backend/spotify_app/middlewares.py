@@ -66,14 +66,16 @@ class JWTAuthMiddleware:
             '/user_management/auth/token/refresh/',
             '/admin/',
             # spotify api
-            '/spotify_api/', # Không yêu cầu token với các api của spotify
-            # Spotify app API
-            # '/spotify_app/songs/',
-            
-            
+            '/spotify_api/',
+            # WebSocket
+            '/ws/',
         ]
 
     def __call__(self, request):
+        # Skip authentication for WebSocket connections
+        if request.path.startswith('/ws/'):
+            return self.get_response(request)
+            
         if any(request.path.startswith(path) for path in self.public_paths) or request.method == 'OPTIONS':
             return self.get_response(request)
         try:

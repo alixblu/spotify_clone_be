@@ -30,23 +30,35 @@ def get_messages(request, room_id):
         except ChatRoom.DoesNotExist:
             return Response({"error": "Room not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        # Get messages for the room
-        messages = Message.objects.filter(room=room)
+        # Get messages for the room, ordered by created_at
+        messages = Message.objects.filter(room=room).order_by('created_at')
         
         # Apply pagination
         paginator = LimitOffsetPagination()
         paginated_messages = paginator.paginate_queryset(messages, request)
         
-        # Format response
-        message_list = [{
-            "_id": str(msg._id),
-            "content": msg.content,
-            "sender": str(msg.sender._id),
-            "created_at": msg.created_at.isoformat()
-        } for msg in paginated_messages]
+        # Format response with user information
+        message_list = []
+        for msg in paginated_messages:
+            try:
+                user = User.objects.get(_id=msg.sender._id)
+                message_list.append({
+                    "_id": str(msg._id),
+                    "content": msg.content,
+                    "user_id": str(msg.sender._id),
+                    "timestamp": msg.created_at.isoformat(),
+                    "user": {
+                        "_id": str(user._id),
+                        "name": user.name,
+                        "profile_pic": user.profile_pic
+                    }
+                })
+            except User.DoesNotExist:
+                # Skip messages from deleted users
+                continue
 
         return Response({
-            "count": messages.count(),
+            "count": len(message_list),
             "next": paginator.get_next_link(),
             "previous": paginator.get_previous_link(),
             "results": message_list
