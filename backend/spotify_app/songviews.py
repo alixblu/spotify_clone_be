@@ -66,23 +66,17 @@ def upload_song(request):
     print(f"DEBUG: Nhận dữ liệu yêu cầu - {request.data}")
     print(f"DEBUG: Nhận file - {request.FILES}")
 
-    audio_blob = request.FILES.get('audio_file')
-    video_blob = request.FILES.get('video_file')
-
-    if not audio_blob:
-        return Response({"error": "Không nhận được file âm thanh"}, status=400)
-
-    audio_duration = get_audio_duration(audio_blob)
-    song_duration = format_duration(audio_duration) if audio_duration else "00:00:00"
-
     song_data = {
         'title': request.data.get('title'),
-        'duration': song_duration,
-        'audio_file': audio_blob,
-        'video_file': video_blob,
+        'audio_file': request.data.get('audio_file'),
+        'video_file': request.data.get('video_file'),
         'img': request.data.get('img', None),
         'album_id': request.data.get('album_id'),
+        'duration': request.data.get('duration', '00:00:00'),  # Mặc định nếu không có duration
     }
+
+    if not song_data['audio_file']:
+        return Response({"error": "Không nhận được URL file âm thanh"}, status=400)
 
     print(f"DEBUG: Dữ liệu bài hát = {song_data}")
     serializer = SongSerializer(data=song_data, context={'request': request})

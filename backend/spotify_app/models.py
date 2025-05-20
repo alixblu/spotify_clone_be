@@ -54,16 +54,16 @@ class Song(models.Model):
     album_id = models.ForeignKey(Album, on_delete=models.CASCADE, blank=True, null=True)
     title = models.CharField(max_length=255)
     duration = models.TimeField()
-    # Tạm thời gắn FileField cho video, audio và img, 
-    # Sau này thay FileField bằng URLField/CharField để lưu URL từ Cloudinary
-    video_file = models.FileField(upload_to='videos/', blank=True, null=True)
-    audio_file = models.FileField(upload_to='audios/', blank=True, null=True)
+    audio_file = models.URLField(max_length=500, blank=True, null=True)  # Đổi thành URLField
+    video_file = models.URLField(max_length=500, blank=True, null=True)  # Đổi thành URLField
     img = models.URLField(blank=True, null=True)
     isfromDB = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     isHidden = models.BooleanField(default=False)
+
     class Meta:
         db_table = "songs"
+
     def __str__(self):
         return self.title
 

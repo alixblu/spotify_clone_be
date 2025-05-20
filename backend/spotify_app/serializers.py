@@ -63,10 +63,20 @@ class AlbumSerializer(serializers.ModelSerializer):
 class SongSerializer(serializers.ModelSerializer):
     album = AlbumSerializer(read_only=True, source='album_id')
     album_id = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    audio_file = serializers.URLField(required=True)  # Bắt buộc, phải là URL
+    video_file = serializers.URLField(required=False, allow_blank=True, allow_null=True)
+    duration = serializers.TimeField(required=False, allow_null=True)  # Tùy chọn
 
     class Meta:
         model = Song
         fields = '__all__'
+
+    def validate_audio_file(self, value):
+        if not value:
+            raise serializers.ValidationError("URL file âm thanh là bắt buộc")
+        if not value.startswith("https://res.cloudinary.com/"):
+            raise serializers.ValidationError("URL âm thanh phải từ Cloudinary")
+        return value
 
     def validate_album_id(self, value):
         print(f"DEBUG: Validating album_id: {value}")
