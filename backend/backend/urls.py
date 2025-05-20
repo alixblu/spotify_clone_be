@@ -25,7 +25,7 @@ urlpatterns = [
     path('spotify_api/', include('spotify_api.urls')),
     path('spotify_app/', include('spotify_app.urls')),
     path('chatting/', include('chatting.urls')),
-
+    path('payment/', include('payment.urls')),
     # Schema và Swagger UI
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),

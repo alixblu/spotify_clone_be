@@ -31,3 +31,5 @@ __pycache__/
 # Media
 backend/media/
 note.txt
+backend/package.json
+backend/package-lock.json

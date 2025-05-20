@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'music_library',
     'chatting',
     'channels',
+    'payment',
 ]
 
 
@@ -396,4 +397,10 @@ CHANNEL_LAYERS = {
         'BACKEND': 'channels.layers.InMemoryChannelLayer'
     }
 }
+
+# PayPal Settings
+PAYPAL_MODE = 'sandbox'  # Change to 'live' for production
+PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID")
+PAYPAL_CLIENT_SECRET = os.getenv("PAYPAL_CLIENT_SECRET")
+BASE_URL = 'http://localhost:8000'  # Backend server URL for PayPal redirects
 
