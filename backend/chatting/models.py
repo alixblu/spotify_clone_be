@@ -2,6 +2,7 @@ from djongo import models
 from django.utils import timezone
 from user_management.models import User
 from music_library.models import *
+from spotify_app.models import Song
 
 class ChatRoom(models.Model):
     _id = models.ObjectIdField(primary_key=True, auto_created=True)
@@ -10,9 +11,12 @@ class ChatRoom(models.Model):
     description = models.TextField(blank=True, null=True)
     users = models.ArrayReferenceField(
         to=User,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,default=list, related_name='joined_rooms'
     )
-    playlist = models.ForeignKey(Playlist, on_delete=models.SET_NULL, null=True, blank=True)
+    song_list = models.ArrayReferenceField(
+        to=Song,
+        on_delete=models.CASCADE,default=list, related_name='room_playlist'
+    )
     playing_song = models.ForeignKey(Song, on_delete=models.SET_NULL, null=True, blank=True)
     current_time = models.FloatField(default=0.0)
     play_started_at = models.DateTimeField(null=True, blank=True)
