@@ -44,7 +44,7 @@ from bson import ObjectId  # Import this at the top
     request_serializer=UserSerializer
 )
 @api_view(['POST'])
-@permission_classes([AllowAny])  # Cho phép bất kỳ ai truy cập
+@permission_classes([AllowAny])
 def register(request):
     try:
         required_fields = ['name', 'dob', 'gender', 'email', 'password']
@@ -54,22 +54,29 @@ def register(request):
         if User.objects.filter(email=request.data['email']).exists():
             return Response({"error": "Email already registered"}, status=400)
 
+        role = request.data.get('role', 'user') 
+
         user = User.objects.create(
             name=request.data['name'],
             dob=request.data['dob'],
             gender=request.data['gender'],
             email=request.data['email'],
-            password=request.data['password'],  # Auto-hashed in the model
-            role='user',
+            password=request.data['password'],
+            role=role,
         )
 
-        return Response({"message": "User registered successfully!", "data": MinimalUserSerializer(user).data}, status=201)
+        return Response({
+            "message": "User registered successfully!",
+            "data": MinimalUserSerializer(user).data
+        }, status=201)
+
     except Exception as e:
         traceback.print_exc()
         return Response({
             "error": "Registration failed",
             "detail": str(e)
         }, status=500)
+
 
 # 2. Login API
 @SchemaFactory.post_schema(
@@ -234,7 +241,9 @@ def refresh_access_token(request):
     serializer=UserSerializer
 )
 @api_view(['GET'])
-@permission_classes([IsAdminUser])
+# @permission_classes([IsAdminUser])
+@permission_classes([AllowAny])
+# @permission_classes([IsAuthenticated])
 def get_user_list(request):
     # Lọc theo email và name
     email = request.query_params.get('email')
@@ -384,3 +393,36 @@ def get_user_by_id(request , _id=None):
             "error": "An error occurred while retrieving user information",
             "detail": str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['PATCH'])
+@permission_classes([AllowAny])  # Hoặc IsAuthenticated nếu có xác thực
+def update_user_is_hidden(request, _id=None):
+    try:
+        user = User.objects.get(_id=ObjectId(_id))
+    except User.DoesNotExist:
+        return Response({"success": False, "error": "User not found"}, status=404)
+
+    # ❌ Không cho phép ẩn tài khoản admin
+    if user.role == "admin":
+        return Response({
+            "success": False,
+            "error": "Không thể thay đổi trạng thái ẩn của tài khoản admin"
+        }, status=403)
+
+    is_hidden = request.data.get('isHidden')
+
+    if not isinstance(is_hidden, bool):
+        return Response({
+            "success": False,
+            "error": "isHidden phải là kiểu boolean"
+        }, status=400)
+
+    user.isHidden = is_hidden
+    user.save()
+
+    return Response({
+        "success": True,
+        "message": f"isHidden updated to {is_hidden}",
+        "data": {"_id": str(user._id), "isHidden": user.isHidden}
+    }, status=200)
