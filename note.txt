@@ -1,4 +1,0 @@
-admin account: admin@example.com
-password: 12345
-
-api testing: https://app.getpostman.com/join-team?invite_code=85a0610a57be96acccf38e744f699793507d842312087bd253457d6c2c6e7b60

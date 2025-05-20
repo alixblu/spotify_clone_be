@@ -27,7 +27,7 @@ class ArtistPerform(models.Model):
 
     def __str__(self):
         return f"Artist {self.artist} performed Song {self.song}"
-
+    
 class FavoriteSong(models.Model):
     _id = models.ObjectIdField(primary_key=True, default=ObjectId, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE)

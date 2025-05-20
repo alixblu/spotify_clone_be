@@ -1,124 +1,102 @@
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
+from bson.errors import InvalidId
+from datetime import datetime
 from .models import Album, Artist
 from .serializers import AlbumSerializer
-from bson import ObjectId
-from bson.errors import InvalidId
 from backend.utils import SchemaFactory
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from spotify_app.permissionsCustom import IsAdminUser
+
+from bson import ObjectId, errors
 
 # 1. Create Album API
-@SchemaFactory.post_schema(
-    request_example={
-        "artist": "507f1f77bcf86cd799439011",
-        "album_name": "Album mới",
-        "artist_name": "Nghệ sĩ ABC",
-        "cover_img": "https://example.com/cover.jpg",
-        "release_date": "2023-01-01",
-        "total_tracks": 10,
-        "isfromDB": True
-    },
-    success_response={
-        "message": "Album created successfully!",
-        "data": {
-            "_id": "507f1f77bcf86cd799439012",
-            "artist_id": "507f1f77bcf86cd799439011",
-            "album_name": "Album mới",
-            "artist_name": "Nghệ sĩ ABC",
-            "cover_img": "https://example.com/cover.jpg",
-            "release_date": "2023-01-01",
-            "total_tracks": 10,
-            "isfromDB": True,
-            "isHidden": False
-        }
-    },
-    error_responses=[
-        {
-            "name": "Validation Error",
-            "response": {
-                "album_name": ["This field is required."],
-                "artist_id": ["This field is required."]
-            },
-            "status_code": 400
-        }
-    ],
-    description="Tạo album mới",
-    request_serializer=AlbumSerializer
-)
 @api_view(['POST'])
-@permission_classes([IsAdminUser])  # Chỉ cho phép admin tạo album
+@permission_classes([AllowAny])
 def create_album(request):
-    """ 
-    Create a new album
-    Required fields: artist_id, album_name, release_date
-    """
     try:
-        # 1. Kiểm tra các trường bắt buộc
+        print("Received data:", dict(request.data), "Files:", dict(request.FILES))
+
+        def get_string_value(field, default=''):
+            value = request.data.get(field, default)
+            print(f"Getting {field}:", value, type(value))
+            if isinstance(value, list):
+                return value[0].strip() if value and value[0] else default
+            return value.strip() if isinstance(value, str) else default
+
+        # Kiểm tra các trường bắt buộc
         required_fields = ['artist', 'album_name', 'release_date']
         for field in required_fields:
-            if field not in request.data or not request.data.get(field):
+            value = get_string_value(field)
+            if not value:
                 return Response(
                     {"error": f"Trường '{field}' là bắt buộc."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-        # 2. Kiểm tra artist_id có hợp lệ không và có tồn tại không
-        artist_id = request.data['artist']
-        print(f"DEBUG: Nhận artist_id - {artist_id}")
-
+        # Lấy artist_id và kiểm tra nghệ sĩ
+        artist_id = get_string_value('artist')
+        print("Processed artist_id:", artist_id, type(artist_id))
         try:
-            artist_obj = Artist.objects.get(_id=ObjectId(artist_id))
-            print(f"DEBUG: Tìm thấy Artist - {artist_obj}")
-        except (Artist.DoesNotExist, InvalidId):
+            artist = Artist.objects.get(_id=ObjectId(artist_id))
+        except (Artist.DoesNotExist, ValueError):
             return Response(
-                {"error": "Invalid artist_id or artist not found."},
+                {"error": "ID nghệ sĩ không hợp lệ hoặc không tồn tại."},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        print(f"DEBUG: artist_obj - {artist_obj._id}")
-        # 3. Chuẩn bị dữ liệu album
+
+        # Tạo dữ liệu album
+        release_date = get_string_value('release_date')
+        print("Processed release_date:", release_date, type(release_date))
+        if not release_date:
+            return Response(
+                {"error": "Ngày phát hành không được để trống."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         album_data = {
-            'artist': ObjectId(artist_obj._id),  # Nếu AlbumSerializer yêu cầu chuỗi
-            'album_name': request.data['album_name'].strip(),
-            'artist_name': request.data.get('artist_name', '').strip() or artist_obj.name,  # fallback nếu không có
-            'cover_img': request.data.get('cover_img'),
-            'release_date': request.data['release_date'],
-            'total_tracks': int(request.data.get('total_tracks', 0)),
-            'isfromDB': bool(request.data.get('isfromDB', True)),
-            'isHidden': bool(request.data.get('isHidden', False)),
+            'artist': artist_id,  # Truyền chuỗi, serializer sẽ chuyển thành instance
+            'album_name': get_string_value('album_name'),
+            'artist_name': artist.artist_name,  # Lấy tên nghệ sĩ từ đối tượng Artist
+            'release_date': release_date,
+            'total_tracks': int(get_string_value('total_tracks', '0') or 0),
+            'isfromDB': get_string_value('isfromDB', 'true').lower() == 'true',
+            'isHidden': get_string_value('isHidden', 'false').lower() == 'true',
+            'cover_img': get_string_value('cover_img', None),
         }
 
-        # 4. Validate và lưu dữ liệu
+        # Debug dữ liệu trước khi serialize
+        print("Album data before serializer:", album_data)
+
+        # Lưu album
         serializer = AlbumSerializer(data=album_data)
         if serializer.is_valid():
             serializer.save()
             return Response(
-                {
-                    "message": "Album created successfully!",
-                    # "data": serializer.data
-                },
+                {"message": "Tạo album thành công!", "data": serializer.data},
                 status=status.HTTP_201_CREATED
             )
-
-        # Nếu không hợp lệ, trả về lỗi
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    except Exception as e:
+        print("Serializer errors:", serializer.errors)
         return Response(
-            {"error": f"Lỗi hệ thống: {str(e)}"},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {"error": "Dữ liệu không hợp lệ.", "details": serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST
         )
 
+    except Exception as e:
+        print("Exception:", str(e))
+        return Response(
+            {"error": f"Lỗi hệ thống khi tạo album: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 # 2. List Albums API
 @SchemaFactory.list_schema(
     item_example={
         "_id": "507f1f77bcf86cd799439011",
         "album_name": "Album mẫu",
         "artist_name": "Nghệ sĩ XYZ",
-        "cover_img": "https://example.com/cover1.jpg",
-        "release_date": "2022-01-01",
-        "total_tracks": 12,
+        "cover_img": "https://example.com/cover.jpg",
+        "release_date": "2023-01-01",
+        "total_tracks": 10,
         "isHidden": False
     },
     search_fields=["album_name", "artist_name"],
@@ -127,12 +105,25 @@ def create_album(request):
     serializer=AlbumSerializer
 )
 @api_view(['GET'])
-@permission_classes([AllowAny])  # Cho phép bất kỳ ai truy cập
+@permission_classes([AllowAny])
 def list_albums(request):
     """ Retrieve all albums """
-    albums = Album.objects.all()
-    serializer = AlbumSerializer(albums, many=True)
-    return Response(serializer.data)
+    try:
+        albums = Album.objects.all()
+        serializer = AlbumSerializer(albums, many=True)
+        data = serializer.data
+        
+        # Convert ObjectId to string for each album
+        for album in data:
+            album['_id'] = str(album['_id'])
+            album['artist'] = str(album['artist'])
+            
+        return Response(data)
+    except Exception as e:
+        return Response(
+            {"error": f"Error retrieving albums: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
 # 3. Get Album Detail API
@@ -140,100 +131,205 @@ def list_albums(request):
     item_id_param="album_id",
     success_response={
         "_id": "507f1f77bcf86cd799439011",
-        "album_name": "Album chi tiết",
+        "album_name": "Chi tiết Album",
         "artist_name": "Nghệ sĩ ABC",
-        "cover_img": "https://example.com/cover2.jpg",
+        "cover_img": "https://example.com/cover.jpg",
         "release_date": "2023-05-01",
         "total_tracks": 8,
         "isHidden": False
     },
-    description="Lấy thông tin chi tiết album"
+    description="Lấy thông tin chi tiết một album"
 )
 @api_view(['GET'])
-@permission_classes([AllowAny])  # Cho phép bất kỳ ai truy cập
+@permission_classes([AllowAny])
 def get_album(request, album_id):
-    """ Retrieve a specific album by ID """
     try:
-        # Chuyển album_id thành ObjectId (nếu hợp lệ)
         object_id = ObjectId(album_id)
-        print(f"DEBUG: Nhận object_id - {object_id}")
     except InvalidId:
-        return Response(
-            {"error": "Invalid album ID format"},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response({"error": "ID album không hợp lệ."}, status=400)
 
     try:
         album = Album.objects.get(_id=object_id)
-        print(f"DEBUG: Tìm thấy Album - {album}")
-        alserializer = AlbumSerializer(album)
-        data = alserializer.data
-        # Chuyển tất cả ObjectId thành string (nếu có)
+        serializer = AlbumSerializer(album)
+        data = serializer.data
         data['_id'] = str(album._id)
-        print(f"DEBUG: album._id - {album._id}")
-        print(f"DEBUG: data['_id'] - {data['_id']}")
-        print(f"DEBUG: data - {data}")
-        data['artist_id'] = str(album.artist_id)
-        print(f"DEBUG: data['artist_id'] - {data['artist_id']}")
         data['artist'] = str(album.artist)
-        print(f"DEBUG: data['artist'] - {data['artist']}")
         return Response(data)
     except Album.DoesNotExist:
-        return Response(
-            {"error": "Album not found"},
-            status=status.HTTP_404_NOT_FOUND
-        )
+        return Response({"error": "Không tìm thấy album."}, status=404)
 
 
 # 4. Update Album API
-@SchemaFactory.update_schema(
-    item_id_param="album_id",
-    request_example={
-        "album_name": "Tên album mới",
-        "total_tracks": 15
-    },
-    success_response={
-        "message": "Album updated!",
-        "data": {
-            "_id": "507f1f77bcf86cd799439011",
-            "album_name": "Tên album mới",
-            "total_tracks": 15,
-            # ... other fields
-        }
-    },
-    description="Cập nhật thông tin album",
-    request_serializer=AlbumSerializer
-)
-@api_view(['PUT'])
-@permission_classes([AllowAny])  # Cho phép bất kỳ ai truy cập
-def update_album(request, album_id):
-    """ Update album details """
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def create_album(request):
     try:
-        album = Album.objects.get(_id=ObjectId(album_id))
-        serializer = AlbumSerializer(album, data=request.data, partial=True)
+        print("Received data:", dict(request.data), "Files:", dict(request.FILES))
+
+        def get_string_value(field, default=''):
+            value = request.data.get(field, default)
+            print(f"Getting {field}:", value, type(value))
+            if isinstance(value, list):
+                return value[0].strip() if value and value[0] else default
+            return value.strip() if isinstance(value, str) else default
+
+        required_fields = ['artist', 'album_name', 'release_date']
+        for field in required_fields:
+            value = get_string_value(field)
+            if not value:
+                return Response(
+                    {"error": f"Trường '{field}' là bắt buộc."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        artist_id = get_string_value('artist')
+        print("Processed artist_id:", artist_id, type(artist_id))
+
+        release_date = get_string_value('release_date')
+        print("Processed release_date:", release_date, type(release_date))
+        if not release_date:
+            return Response(
+                {"error": "Ngày phát hành không được để trống."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        album_data = {
+            'artist': artist_id,
+            'album_name': get_string_value('album_name'),
+            'artist_name': get_string_value('artist_name', 'Unknown Artist'),
+            'release_date': release_date,
+            'total_tracks': int(get_string_value('total_tracks', '0') or 0),
+            'isfromDB': get_string_value('isfromDB', 'true').lower() == 'true',
+            'isHidden': get_string_value('isHidden', 'false').lower() == 'true',
+            'cover_img': get_string_value('cover_img', None),
+        }
+
+        print("Album data before serializer:", album_data)
+
+        serializer = AlbumSerializer(data=album_data)
         if serializer.is_valid():
             serializer.save()
-            return Response({"message": "Album updated!", "data": serializer.data})
-        return Response(serializer.errors, status=400)
-    except Album.DoesNotExist:
-        return Response({"error": "Album not found"}, status=404)
+            return Response(
+                {"message": "Tạo album thành công!", "data": serializer.data},
+                status=status.HTTP_201_CREATED
+            )
+        print("Serializer errors:", serializer.errors)
+        return Response(
+            {"error": "Dữ liệu không hợp lệ.", "details": serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
+    except Exception as e:
+        print("Exception:", str(e))
+        return Response(
+            {"error": f"Lỗi hệ thống khi tạo album: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+@api_view(['PUT'])
+@permission_classes([AllowAny])
+def update_album(request, albumId):
+    try:
+        print("Received data:", dict(request.data), "Files:", dict(request.FILES))
+
+        # Lấy album hiện có
+        try:
+            album = Album.objects.get(_id=ObjectId(albumId))
+        except (Album.DoesNotExist, ValueError):
+            return Response(
+                {"error": "Album không tồn tại hoặc ID không hợp lệ."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Hàm lấy chuỗi từ request.data
+        def get_string_value(field, default=''):
+            value = request.data.get(field, default)
+            print(f"Getting {field}:", value, type(value))
+            if isinstance(value, list):
+                return value[0].strip() if value and value[0] else default
+            return value.strip() if isinstance(value, str) else default
+
+        # Kiểm tra các trường bắt buộc
+        required_fields = ['artist', 'album_name', 'release_date']
+        for field in required_fields:
+            value = get_string_value(field)
+            if not value:
+                return Response(
+                    {"error": f"Trường '{field}' là bắt buộc."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        # Lấy artist_id
+        artist_id = get_string_value('artist')
+        print("Processed artist_id:", artist_id, type(artist_id))
+
+        # Tạo dữ liệu album
+        release_date = get_string_value('release_date')
+        print("Processed release_date:", release_date, type(release_date))
+        if not release_date:
+            return Response(
+                {"error": "Ngày phát hành không được để trống."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        album_data = {
+            'artist': artist_id,
+            'album_name': get_string_value('album_name'),
+            'artist_name': get_string_value('artist_name', album.artist_name),
+            'release_date': release_date,
+            'total_tracks': int(get_string_value('total_tracks', '0') or 0),
+            'isfromDB': get_string_value('isfromDB', 'true').lower() == 'true',
+            'isHidden': get_string_value('isHidden', 'false').lower() == 'true',
+            'cover_img': get_string_value('cover_img', None),
+        }
+
+        # Debug dữ liệu trước khi serialize
+        print("Album data before serializer:", album_data)
+
+        # Cập nhật album
+        serializer = AlbumSerializer(album, data=album_data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {"message": "Cập nhật album thành công!", "data": serializer.data},
+                status=status.HTTP_200_OK
+            )
+        print("Serializer errors:", serializer.errors)
+        return Response(
+            {"error": "Dữ liệu không hợp lệ.", "details": serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    except Exception as e:
+        print("Exception:", str(e))
+        return Response(
+            {"error": f"Lỗi hệ thống khi cập nhật album: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 # 5. Delete Album API
 @SchemaFactory.delete_schema(
     item_id_params="album_id",
-    success_response={
-        "message": "Album deleted successfully!"
-    },
+    success_response={"message": "Album đã bị xóa!"},
     description="Xóa album"
 )
 @api_view(['DELETE'])
-@permission_classes([AllowAny])  # Cho phép bất kỳ ai truy cập
+@permission_classes([AllowAny])
 def delete_album(request, album_id):
-    """ Delete an album """
     try:
         album = Album.objects.get(_id=ObjectId(album_id))
         album.delete()
-        return Response({"message": "Album deleted successfully!"})
-    except Album.DoesNotExist:
-        return Response({"error": "Album not found"}, status=404)
+        return Response({"message": "Album đã bị xóa!"})
+    except (Album.DoesNotExist, InvalidId):
+        return Response({"error": "Không tìm thấy album."}, status=404)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_albums_by_artist(request, artist_id):
+    try:
+        artist = Artist.objects.get(_id=ObjectId(artist_id))
+        albums = Album.objects.filter(artist=artist)
+        serializer = AlbumSerializer(albums, many=True)
+        return Response(serializer.data)
+    except (Artist.DoesNotExist, InvalidId):
+        return Response({"error": "Không tìm thấy nghệ sĩ."}, status=404)
