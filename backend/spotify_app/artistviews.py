@@ -101,7 +101,7 @@ def get_artist_by_id(request, artist_id):
     request_serializer=ArtistSerializer,
 )
 @api_view(['POST'])
-@permission_classes([IsAdminUser])
+@permission_classes([AllowAny])
 def create_artist(request):
     try:
         # 1. Lấy dữ liệu từ request (không dùng MultiPartParser)
@@ -248,7 +248,7 @@ def get_artist_albums(request, artist_id):
     description="Hide an artist (mark as not visible to public)"
 )
 @api_view(['PUT'])
-@permission_classes([IsAdminUser])
+@permission_classes([AllowAny])
 def hide_artist(request, _id):
     try:
         # Ensure artist_id is valid
@@ -288,7 +288,7 @@ def hide_artist(request, _id):
     description="Unhide an artist (mark as visible to public)"
 )
 @api_view(['PUT'])
-@permission_classes([IsAdminUser])
+@permission_classes([AllowAny])
 def unhide_artist(request, _id):
     try:
         # Ensure artist_id is valid

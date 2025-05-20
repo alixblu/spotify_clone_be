@@ -62,7 +62,6 @@ class Song(models.Model):
     isfromDB = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     isHidden = models.BooleanField(default=False)
-
     class Meta:
         db_table = "songs"
     def __str__(self):
