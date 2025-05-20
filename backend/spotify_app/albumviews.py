@@ -17,7 +17,6 @@ def create_album(request):
     try:
         print("Received data:", dict(request.data), "Files:", dict(request.FILES))
 
-        # Hàm lấy chuỗi từ request.data
         def get_string_value(field, default=''):
             value = request.data.get(field, default)
             print(f"Getting {field}:", value, type(value))
@@ -35,9 +34,16 @@ def create_album(request):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-        # Lấy artist_id để serializer validate
+        # Lấy artist_id và kiểm tra nghệ sĩ
         artist_id = get_string_value('artist')
         print("Processed artist_id:", artist_id, type(artist_id))
+        try:
+            artist = Artist.objects.get(_id=ObjectId(artist_id))
+        except (Artist.DoesNotExist, ValueError):
+            return Response(
+                {"error": "ID nghệ sĩ không hợp lệ hoặc không tồn tại."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         # Tạo dữ liệu album
         release_date = get_string_value('release_date')
@@ -51,8 +57,8 @@ def create_album(request):
         album_data = {
             'artist': artist_id,  # Truyền chuỗi, serializer sẽ chuyển thành instance
             'album_name': get_string_value('album_name'),
-            'artist_name': get_string_value('artist_name', 'Unknown Artist'),
-            'release_date': release_date,  # Truyền chuỗi, serializer sẽ chuyển thành date
+            'artist_name': artist.artist_name,  # Lấy tên nghệ sĩ từ đối tượng Artist
+            'release_date': release_date,
             'total_tracks': int(get_string_value('total_tracks', '0') or 0),
             'isfromDB': get_string_value('isfromDB', 'true').lower() == 'true',
             'isHidden': get_string_value('isHidden', 'false').lower() == 'true',

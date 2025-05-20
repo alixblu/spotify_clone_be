@@ -8,4 +8,5 @@ urlpatterns = [
     path('get_user_info/<str:_id>/', views.get_user_by_id, name='getUserById'),
     path('auth/token/refresh/', views.refresh_access_token, name='token_refresh'),
     path('getallusers/', views.get_user_list, name='get_user_list'),
+    path('users/<str:_id>/is_hidden/', views.update_user_is_hidden, name='update_user_is_hidden'),
 ]
