@@ -486,3 +486,32 @@ def get_user_rooms(request):
         print(traceback.format_exc())
         return Response({"error": f"Unexpected error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_room_state(request, room_id):
+    """Get the current playback state of a room"""
+    try:
+        room = get_object_or_404(ChatRoom, _id=ObjectId(room_id))
+        
+        # Calculate current playback position
+        current_position = room.current_time
+        if room.play_started_at and room.is_playing:
+            # Calculate how far into the song we are based on when it started playing
+            elapsed_time = (timezone.now() - room.play_started_at).total_seconds()
+            current_position = room.current_time + elapsed_time
+        
+        return Response({
+            'playing_song': {
+                '_id': str(room.playing_song._id),
+                'title': room.playing_song.title,
+                'duration': room.playing_song.duration.strftime('%M:%S'),
+                'img': room.playing_song.img,
+                'audio_file': room.playing_song.audio_file.url if room.playing_song.audio_file else None
+            } if room.playing_song else None,
+            'current_time': current_position,
+            'is_playing': room.play_started_at is not None,
+            'play_started_at': room.play_started_at.isoformat() if room.play_started_at else None
+        })
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+

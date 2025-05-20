@@ -20,6 +20,7 @@ class ChatRoom(models.Model):
     playing_song = models.ForeignKey(Song, on_delete=models.SET_NULL, null=True, blank=True)
     current_time = models.FloatField(default=0.0)
     play_started_at = models.DateTimeField(null=True, blank=True)
+    is_playing = models.BooleanField(default=False)
     ban_list = models.ArrayReferenceField(
         to=User,
         on_delete=models.CASCADE,

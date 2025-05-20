@@ -14,6 +14,7 @@ urlpatterns = [
     path('rooms/<str:room_id>/allusers/', roomviews.get_room_users, name='get_room_users'),
     path('rooms/<str:room_id>/messages/', messviews.get_messages, name='get_messages'),
     path('rooms/<str:room_id>/messages/send/', messviews.send_message, name='send_message'),
+    path('rooms/<str:room_id>/state/', roomviews.get_room_state, name='get_room_state'),
     # path('room/<str:room_id>/leave', roomviews.remove_user, name='remove_user'),
     
     # Room playlist endpoints (simplified)
