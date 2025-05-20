@@ -1,6 +1,7 @@
 from djongo import models
 from django.utils import timezone
 from user_management.models import User
+from music_library.models import *
 
 class ChatRoom(models.Model):
     _id = models.ObjectIdField(primary_key=True, auto_created=True)
@@ -11,10 +12,14 @@ class ChatRoom(models.Model):
         to=User,
         on_delete=models.CASCADE
     )
+    playlist = models.ForeignKey(Playlist, on_delete=models.SET_NULL, null=True, blank=True)
+    playing_song = models.ForeignKey(Song, on_delete=models.SET_NULL, null=True, blank=True)
+    current_time = models.FloatField(default=0.0)
+    play_started_at = models.DateTimeField(null=True, blank=True)
     ban_list = models.ArrayReferenceField(
         to=User,
         on_delete=models.CASCADE,
-        related_name='banned_rooms',
+        related_name='banned_users',
         default=list
     )
     created_at = models.DateTimeField(default=timezone.now)
