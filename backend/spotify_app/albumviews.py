@@ -48,7 +48,7 @@ from spotify_app.permissionsCustom import IsAdminUser
     request_serializer=AlbumSerializer
 )
 @api_view(['POST'])
-@permission_classes([IsAdminUser])  # Chỉ cho phép admin tạo album
+@permission_classes([AllowAny])  # Chỉ cho phép admin tạo album
 def create_album(request):
     """ 
     Create a new album
@@ -130,9 +130,22 @@ def create_album(request):
 @permission_classes([AllowAny])  # Cho phép bất kỳ ai truy cập
 def list_albums(request):
     """ Retrieve all albums """
-    albums = Album.objects.all()
-    serializer = AlbumSerializer(albums, many=True)
-    return Response(serializer.data)
+    try:
+        albums = Album.objects.all()
+        serializer = AlbumSerializer(albums, many=True)
+        data = serializer.data
+        
+        # Convert ObjectId to string for each album
+        for album in data:
+            album['_id'] = str(album['_id'])
+            album['artist'] = str(album['artist'])
+            
+        return Response(data)
+    except Exception as e:
+        return Response(
+            {"error": f"Error retrieving albums: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
 # 3. Get Album Detail API

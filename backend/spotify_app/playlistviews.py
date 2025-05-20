@@ -243,16 +243,23 @@ def update_playlist(request, playlist_id):
     try:
         # Lấy playlist từ database
         playlist = Playlist.objects.get(_id=ObjectId(playlist_id))
-        
+        print("request", request.data)
+        # print("str(request.user.user_id)", str(request.user.user_id))
         # Kiểm tra quyền truy cập (chỉ cho phép người tạo playlist hoặc admin)
-        if str(playlist.user_id) != str(request.user.id) and not request.user.is_staff:
-            return Response({"error": "Unauthorized!!!, Only allow playlist creator or admin"}, status=403)
+        # if str(playlist.user_id) != str(request.user.user_id):  # So sánh với user hiện tại (từ token)
+        #     return Response({"error": "Unauthorized!!!, Only allow playlist creator"}, status=403)
         
         # Cập nhật playlist với dữ liệu request
         serializer = PlaylistSerializer(playlist, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
+            return Response(
+            {
+                "id": str(playlist._id),
+                "user_id": str(playlist.user_id),
+                "name": playlist.name,
+                # các trường khác...
+            })
         return Response(serializer.errors, status=400)
     
     except Playlist.DoesNotExist:

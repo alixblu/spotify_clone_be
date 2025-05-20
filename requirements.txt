@@ -1,35 +1,39 @@
-# Django framework
-#have to be this version because
-# This version of Django is compatible with the djongo library
+# Core framework
 django==3.2
 djangorestframework==3.14.0
 django-cors-headers==3.13.0
-djangorestframework-simplejwt==4.8.0
-djongo==1.3.6
-sqlparse==0.4.4
+djangorestframework-simplejwt
 
-# For working with MongoDB
+# Database - Djongo only works with this combo
+djongo==1.3.6
+sqlparse==0.2.4  # Required by djongo 1.3.6
+
+# MongoDB
 pymongo==3.12.3
 
-# Additional libraries for frontend integration and tools
-# djangorestframework>=3.14.0
-# django-cors-headers>=3.13.0
-whitenoise>=6.5.0
+# Deployment tools
+whitenoise==6.5.0
+gunicorn==20.1.0
 
-# Optional: Authentication and permissions
-# djangorestframework-simplejwt>=5.2.2
-django-allauth>=0.55.0
+# Authentication
+django-allauth==0.55.0
 
-# Linting and code quality
-black>=23.1.0
-flake8>=6.0.0
+# Code quality
+black==23.1.0
+flake8==6.0.0
 
-# Optional: Production environment
-gunicorn>=20.1.0
+# API documentation
+drf-spectacular
 
+# Utility packages
 spotipy
 requests
 setuptools
 python-dotenv
 bcrypt
 mutagen
+
+vite
+
+daphne
+sqlparse==0.2.4 channels-redis redis

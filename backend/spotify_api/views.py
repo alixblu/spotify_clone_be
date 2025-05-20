@@ -5,33 +5,6 @@ from .services import get_spotify_access_token
 
 SPOTIFY_SEARCH_URL = "https://api.spotify.com/v1/search"
 
-# def search_edm_artists(request):
-#     """Search for EDM artists using the Spotify API."""
-#     access_token = get_spotify_access_token()
-#     headers = {"Authorization": f"Bearer {access_token}"}
-#     params = {"q": "genre:edm", "type": "artist", "limit": 10}  # Adjust limit as needed
-
-#     response = requests.get(SPOTIFY_SEARCH_URL, headers=headers, params=params)
-
-#     if response.status_code != 200:
-#         return {"error": f"Spotify API returned {response.status_code}"}
-
-#     artists_data = response.json()["artists"]["items"]
-
-#     # Format artist data
-#     artists = [
-#         {
-#             "artist_id": artist["id"],
-#             "name": artist["name"],
-#             "genre": "EDM",
-#             "CoverImage": artist["images"][0]["url"] if artist["images"] else None,
-#             "label": "Nghệ sĩ",
-#         }
-#         for artist in artists_data
-#     ]
-    
-#     return JsonResponse(artists, safe=False)
-
 def search_edm_artists(request):
     """Search for EDM artists using the Spotify API."""
     access_token = get_spotify_access_token()
@@ -121,41 +94,6 @@ def fetch_artist_top_tracks(request, artist_id):
 
 
 @csrf_exempt
-# its works, dont touch it
-# def fetch_new_releases(request):
-#     access_token = get_spotify_access_token()  # Ensure this function works correctly
-#     new_releases_url = "https://api.spotify.com/v1/browse/new-releases"
-#     headers = {"Authorization": f"Bearer {access_token}"}
-#     response = requests.get(new_releases_url, headers=headers)
-
-#     # Check for invalid response
-#     if response.status_code != 200:
-#         return JsonResponse({"error": f"Spotify API returned {response.status_code}"}, status=response.status_code)
-
-#     new_releases_data = response.json()
-
-#     # Debug: Print the response to see the structure
-#     print(new_releases_data)
-
-#     # Extract albums from the response
-#     try:
-#         albums = new_releases_data["albums"]["items"]
-#         formatted_albums = [
-#             {
-#                 "AlbumID": album["id"],
-#                 "Title": album["name"],
-#                 "Artist": ", ".join(artist["name"] for artist in album["artists"]),
-#                 "CoverImage": album["images"][0]["url"] if album["images"] else None,
-#                 "ReleaseDate": album["release_date"],
-#                 "TotalTracks": album["total_tracks"],
-
-#             }
-#             for album in albums
-#         ]
-#         return JsonResponse(formatted_albums, safe=False)
-#     except KeyError as e:
-#         return JsonResponse({"error": f"Failed to fetch new releases: {str(e)}"}, status=500)
-
 def fetch_new_releases(request):
     access_token = get_spotify_access_token()  # Ensure this function works correctly
     new_releases_url = "https://api.spotify.com/v1/browse/new-releases"

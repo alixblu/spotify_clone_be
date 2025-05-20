@@ -1,6 +1,7 @@
 from pymongo import MongoClient
-from django.conf import settings
-
-client = MongoClient(settings.DATABASE_URL)
-db = client.spotify
-print(settings.DATABASE_URL)  # Test if database URL is accessible
+client = MongoClient('mongodb://localhost:27017', serverSelectionTimeoutMS=5000)
+try:
+    client.admin.command('ping')
+    print("MongoDB is reachable")
+except Exception as e:
+    print(f"Error connecting to MongoDB: {e}")

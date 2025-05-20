@@ -1,28 +1,42 @@
-import os
+import subprocess
 import sys
+import os
+import time
+from threading import Thread
 
-def runmigration():
-    try:
-        # Running migrations
-        os.system("python manage.py makemigrations")
-        os.system("python manage.py migrate")
-        print("Migrations applied successfully.")
-    except Exception as e:
-        print(f"Error while applying migrations: {e}")
-        sys.exit(1)
+def run_django():
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+    subprocess.run([sys.executable, 'manage.py', 'runserver', '0.0.0.0:8000'])
 
-def runserver():
-    try:
-        # Running the server
-        os.system("python manage.py runserver")
-    except Exception as e:
-        print(f"Error while running the server: {e}")
-        sys.exit(1)
+def run_daphne():
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+    # Use python -m daphne to ensure proper Python path
+    subprocess.run([
+        sys.executable, 
+        '-m', 
+        'daphne',
+        '-b', '0.0.0.0',
+        '-p', '8001',
+        'backend.asgi:application'
+    ])
 
-if __name__ == "__main__":
+if __name__ == '__main__':
+    # Start Django server
+    django_thread = Thread(target=run_django)
+    django_thread.daemon = True
+    django_thread.start()
+
+    # Give Django server a moment to start
+    time.sleep(2)
+
+    # Start Daphne server
+    daphne_thread = Thread(target=run_daphne)
+    daphne_thread.daemon = True
+    daphne_thread.start()
+
     try:
-        runmigration()
-        runserver()
-    except Exception as e:
-        print(f"Unexpected error: {e}")
-        sys.exit(1)
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("\nShutting down servers...")
+        sys.exit(0)

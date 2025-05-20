@@ -62,7 +62,7 @@ def get_audio_duration(audio_file):
     request_serializer=SongSerializer
 )
 @api_view(['POST'])
-@permission_classes([IsAdminUser])
+@permission_classes([AllowAny])
 @parser_classes([MultiPartParser, FormParser])
 def upload_song(request):
     # print(f"DEBUG: Received request data - {request.data}")

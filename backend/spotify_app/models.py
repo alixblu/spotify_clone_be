@@ -19,7 +19,7 @@ class Playlist(models.Model):
         return self.name
     
 class Artist(models.Model):
-    _id = models.ObjectIdField(primary_key=True, auto_created=True)
+    _id = models.ObjectIdField(primary_key=True, default=ObjectId, auto_created=True)
     artist_name = models.CharField(max_length=255)
     profile_img = models.URLField(blank=True, null=True)
     biography = models.TextField(blank=True)

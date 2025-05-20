@@ -10,6 +10,7 @@ from backend.utils import SchemaFactory
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.pagination import LimitOffsetPagination
 import logging
+import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -101,14 +102,15 @@ def get_artist_by_id(request, artist_id):
     request_serializer=ArtistSerializer,
 )
 @api_view(['POST'])
-@permission_classes([IsAdminUser])
+@permission_classes([AllowAny])
 def create_artist(request):
     try:
         # 1. Lấy dữ liệu từ request (không dùng MultiPartParser)
         data = request.data
-        
+        print(f"DEBUG: Nhận dữ liệu - {data}")
         # 2. Validate dữ liệu
         serializer = ArtistSerializer(data=data)
+        print(f"DEBUG: Serializer - {serializer}")
         if not serializer.is_valid():
             return Response(
                 {"error": "Validation error", "details": serializer.errors},
@@ -117,7 +119,7 @@ def create_artist(request):
         
         # 3. Lưu artist (chỉ lưu URL)
         artist = serializer.save()
-        
+        print(f"DEBUG: Artist - {artist}")
         return Response(
             {
                 "message": "Artist created successfully",
@@ -131,9 +133,10 @@ def create_artist(request):
         )
         
     except Exception as e:
-        logger.error(f"Error creating artist: {str(e)}")
+        print("❗️Lỗi exception khi tạo artist:", str(e))
+        traceback.print_exc()  # In lỗi cụ thể ra console
         return Response(
-            {"error": "Internal server error"},
+            {"error": "Internal server error", "details": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
     
@@ -151,18 +154,22 @@ def create_artist(request):
 @permission_classes([AllowAny])
 def update_artist(request, artist_id):
     try:
-        artist = Artist.objects.get(id=artist_id)
+        artist = Artist.objects.get(_id=ObjectId(artist_id))
+        serializer = ArtistSerializer(artist, data=request.data, partial=True)
+        if serializer.is_valid():
+            try:
+                serializer.save()
+                return Response({
+                    "success": True,
+                    "message": "Artist updated successfully",
+                    "artist": serializer.data}, status=status.HTTP_200_OK)
+            except Exception:
+                return Response({"error": "Error updating artist"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     except Artist.DoesNotExist:
         return Response({"error": "Artist not found"}, status=status.HTTP_404_NOT_FOUND)
 
-    serializer = ArtistSerializer(artist, data=request.data, partial=True)
-    if serializer.is_valid():
-        try:
-            serializer.save()
-            return Response({"message": "Artist updated successfully"}, status=status.HTTP_200_OK)
-        except Exception:
-            return Response({"error": "Error updating artist"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
 
 
 # Xóa nghệ sĩ
