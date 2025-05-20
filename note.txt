@@ -1,0 +1,103 @@
+https://sandbox.paypal.com
+
+python -m venv spotify_envi
+source spotify_envi/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+
+
+
+SecurePassword123
+Password@123 
+
+sudo mongod --config /etc/mongod.conf
+
+daphne -b 0.0.0.0 -p 8000 run_daphne:application
+
+api testing: http://127.0.0.1:8000/api/docs/swagger/
+
+git pull --no-rebase origin main
+
+ngrok http 8000
+
+PayPal Integration and ngrok Setup Notes
+=====================================
+
+1. ngrok Setup
+-------------
+a) Install ngrok:
+   - Sign up at https://dashboard.ngrok.com/signup
+   - Get your authtoken from https://dashboard.ngrok.com/get-started/your-authtoken
+   - Install ngrok: npm install -g ngrok
+   - Configure authtoken: ngrok config add-authtoken YOUR_AUTH_TOKEN
+
+b) Run ngrok:
+   - Start Django server first (on port 8000)
+   - Run: ngrok http 8000
+   - Note down the ngrok URL (e.g., https://xxxx-xx-xx-xxx-xx.ngrok-free.app)
+   - Access ngrok inspector at http://127.0.0.1:4040/inspect/http
+
+2. PayPal Developer Setup
+------------------------
+a) Create PayPal Developer Account:
+   - Go to https://developer.paypal.com/dashboard/
+   - Sign up or log in
+
+b) Create New App:
+   - Click "Create App"
+   - App Name: "Spotify Clone"
+   - App Type: Web Application
+   - Save Client ID and Secret
+
+c) Add to .env file:
+   PAYPAL_CLIENT_ID=your_client_id_here
+   PAYPAL_CLIENT_SECRET=your_secret_key_here
+
+3. PayPal Webhook Setup
+----------------------
+a) In PayPal Developer Dashboard:
+   - Go to your app
+   - Navigate to Webhooks
+   - Add Webhook
+   - URL: https://your-ngrok-url/payment/ipn/
+   - Select events:
+     * PAYMENT.SALE.COMPLETED
+     * PAYMENT.SALE.REFUNDED
+     * PAYMENT.SALE.DENIED
+
+4. Testing PayPal Integration
+---------------------------
+a) Keep running:
+   - Django server on port 8000
+   - ngrok tunnel
+   - ngrok inspector for monitoring
+
+b) Test Payment Flow:
+   - Create payment through frontend
+   - Redirected to PayPal
+   - Complete/cancel payment
+   - Check redirects
+   - Monitor IPN in ngrok inspector
+
+5. Important Notes
+----------------
+- ngrok URL changes each time you restart ngrok
+- Update webhook URL in PayPal dashboard when ngrok URL changes
+- Always use Sandbox mode for testing
+- Keep ngrok running while testing payments
+- Monitor ngrok inspector for debugging
+
+6. Common Issues
+--------------
+- If IPN not received: Check ngrok URL is correct in PayPal dashboard
+- If payment fails: Check PayPal sandbox account credentials
+- If redirects fail: Verify BASE_URL in settings.py is correct
+- If webhook fails: Check ngrok is running and URL is accessible
+
+7. Production Considerations
+--------------------------
+- Replace ngrok with actual domain
+- Switch from sandbox to live mode
+- Update BASE_URL to production domain
+- Use proper SSL certificates
+- Set up proper error handling and logging

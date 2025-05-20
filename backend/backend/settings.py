@@ -27,9 +27,17 @@ SECRET_KEY = 'django-insecure-zbb^@6$^lq^or+@*gj0&xr-w*1(yqzwuzhis3&gc8)-3824@2@
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+# Base allowed hosts
+ALLOWED_HOSTS = [
+    '127.0.0.1', 
+    'localhost',
+    '.ngrok-free.app',  # This will allow any ngrok-free.app subdomain
+    '.ngrok.io',        # This will allow any ngrok.io subdomain
+    '.ngrok.app'        # This will allow any ngrok.app subdomain
+]
 
-
+# Handle trailing slashes
+APPEND_SLASH = True
 
 # Application definition
 
@@ -53,6 +61,7 @@ INSTALLED_APPS = [
     'music_library',
     'chatting',
     'channels',
+    'payment',
 ]
 
 
@@ -114,6 +123,9 @@ CORS_ALLOW_HEADERS = [
     'sec-websocket-key',
     'sec-websocket-version',
 ]
+
+# Frontend URL
+FRONTEND_URL = 'http://127.0.0.1:5173'
 
 ROOT_URLCONF = 'backend.urls'
 
@@ -397,3 +409,8 @@ CHANNEL_LAYERS = {
     }
 }
 
+# PayPal Settings
+PAYPAL_MODE = 'sandbox'  # Change to 'live' for production
+PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID")
+PAYPAL_CLIENT_SECRET = os.getenv("PAYPAL_CLIENT_SECRET")
+BASE_URL = 'http://localhost:8000'  # Backend server URL for PayPal redirects

@@ -71,6 +71,8 @@ class JWTAuthMiddleware:
             '/spotify_app/',
             # WebSocket
             '/ws/',
+            '/payment/',
+
         ]
 
     def __call__(self, request):
