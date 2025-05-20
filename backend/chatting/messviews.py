@@ -43,8 +43,8 @@ def get_messages(request, room_id):
             try:
                 user = User.objects.get(_id=msg.sender._id)
                 message_list.append({
-                    "_id": str(msg._id),
-                    "content": msg.content,
+            "_id": str(msg._id),
+            "content": msg.content,
                     "user_id": str(msg.sender._id),
                     "timestamp": msg.created_at.isoformat(),
                     "user": {

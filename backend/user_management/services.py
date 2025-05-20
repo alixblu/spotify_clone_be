@@ -25,7 +25,7 @@ def activate_premium(user_email):
     try:
         user = User.objects.get(email=user_email)
         if(user.premium_expired_at is None or not hasattr(user, 'premium_expired_at')):
-            user.premium_expired_at = datetime.now() + timedelta(hours=1)
+            user.premium_expired_at = datetime.now() + timedelta(years=1)
         else:
             return {
                 "success": False, "message": "Premium trail already activated"

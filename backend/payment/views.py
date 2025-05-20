@@ -1,3 +1,5 @@
+from decimal import Decimal, InvalidOperation
+
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -6,14 +8,11 @@ from django.conf import settings
 import json
 from bson import ObjectId
 from .models import Payment
-from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect
 import paypalrestsdk
 
 from user_management.models import User
-
-
-
+from .models import Payment
 
 # Configure PayPal SDK
 paypalrestsdk.configure({
@@ -31,17 +30,25 @@ def create_payment(request):
         amount = data.get('amount')
         user_id = data.get('user_id')
         
-        user_id = ObjectId(user_id) if user_id else None
-        
         if not amount:
             return JsonResponse({"error": "Amount is required"}, status=400)
+        print(f"Received amount: {amount}")  # Debugging line
+        print(type(amount))  # Debugging line
 
+        try:
+            # Convert amount to Decimal, handling both string and numeric inputs
+            amount_decimal = Decimal(str(amount))  # Convert to string first, then to Decimal
+            if amount_decimal <= 0:
+                return JsonResponse({"error": "Amount must be greater than 0"}, status=400)
+        except (InvalidOperation, TypeError, ValueError) as e:
+            return JsonResponse({"error": f"Invalid amount format: {str(e)}"}, status=400)
+
+        print(type(amount_decimal))  # Debugging line
         # Get user if user_id is provided
         user = None
         if user_id:
             try:
-                # Use id field for User model
-                user = User.objects.get(_id=user_id)
+                user = User.objects.get(_id=ObjectId(user_id))
             except User.DoesNotExist:
                 print(f"User not found with id: {user_id}")
                 pass
@@ -61,7 +68,7 @@ def create_payment(request):
             },
             "transactions": [{
                 "amount": {
-                    "total": amount,
+                    "total": str(amount_decimal.quantize(Decimal("0.01"))),
                     "currency": "USD"
                 },
                 "description": "Premium Subscription"
@@ -73,7 +80,7 @@ def create_payment(request):
             Payment.objects.create(
                 user=user,
                 payment_id=payment.id,
-                amount=amount,
+                amount=amount_decimal,  # Store as Decimal
                 status='pending'
             )
             # Find the approval URL in the payment links
@@ -95,24 +102,86 @@ def create_payment(request):
 @csrf_exempt
 def execute_payment(request):
     """Execute a PayPal payment after user approval"""
-    payment_id = request.GET.get('paymentId')
-    payer_id = request.GET.get('PayerID')
+    payment_id = request.GET.get('paymentId')     # This is a PayPal string ID
+    payer_id = request.GET.get('PayerID')         # Also a string, NOT ObjectId
+    token = request.GET.get('token')              # Get the token as well
+
+    print(f"Executing payment - PaymentID: {payment_id}, PayerID: {payer_id}, Token: {token}")  # Debug log
+
+    if not payment_id or not payer_id:
+        return JsonResponse({'error': 'Missing paymentId or PayerID'}, status=400)
 
     try:
-        payment = Payment.objects.get(payment_id=payment_id, user=request.user)
-        paypal_payment = paypalrestsdk.Payment.find(payment_id)
+        # Find local payment record by PayPal string payment_id
+        try:
+            payment = Payment.objects.get(payment_id=payment_id)
+            print(f"Found payment record: {payment}")  # Debug log
+        except Payment.DoesNotExist:
+            print(f"Payment not found in database: {payment_id}")  # Debug log
+            return HttpResponse("Payment not found", status=404)
 
-        if paypal_payment.execute({"payer_id": payer_id}):
-            payment.status = 'completed'
-            payment.save()
-            return redirect('/payment/success/')
-        else:
+        # Execute the payment via PayPal SDK
+        try:
+            paypal_payment = paypalrestsdk.Payment.find(payment_id)
+            print(f"Found PayPal payment: {paypal_payment}")  # Debug log
+            
+            # Execute the payment with just the payer_id
+            if paypal_payment.execute({"payer_id": payer_id}):
+                print("Payment executed successfully")  # Debug log
+
+                # Extract amount string safely from PayPal response
+                try:
+                    amount_str = paypal_payment['transactions'][0]['amount']['total']
+                    amount_decimal = Decimal(amount_str)  # Ensure it's a valid Decimal
+                except Exception as e:
+                    print(f"Error parsing amount from PayPal response: {str(e)}")
+                    amount_decimal = None
+
+                # Update payment record
+                payment.status = 'completed'
+                if amount_decimal:
+                    payment.amount = amount_decimal
+                payment.save()
+
+                # Update user's premium status if payment is successful
+                if payment.user:
+                    try:
+                        from user_management.services import activate_premium
+                        result = activate_premium(payment.user.email)
+                        print(f"Premium activation result: {result}")  # Debug log
+                    except Exception as e:
+                        print(f"Error activating premium: {str(e)}")  # Debug log
+
+                return redirect('/payment/success/')
+            else:
+                print(f"Payment execution failed: {paypal_payment.error}")  # Debug log
+                payment.status = 'failed'
+                payment.save()
+                return redirect('/payment/failed/')
+        except Exception as e:
+            print(f"Error executing PayPal payment: {str(e)}")  # Debug log
             payment.status = 'failed'
             payment.save()
             return redirect('/payment/failed/')
+            
+    except Exception as e:
+        print(f"Unexpected error in execute_payment: {str(e)}")  # Debug log
+        return HttpResponse(f"Error: {str(e)}", status=500)
+
+
+@csrf_exempt
+def cancel_payment(request):
+    """Handle payment cancellation"""
+    payment_id = request.GET.get('paymentId')
+    try:
+        payment = Payment.objects.get(payment_id=payment_id)
+        payment.status = 'cancelled'
+        payment.save()
+        return redirect('/payment/cancelled/')
     except Payment.DoesNotExist:
         return HttpResponse("Payment not found", status=404)
     except Exception as e:
+        print("Error cancelling payment:", str(e))  # Add error logging
         return HttpResponse(f"Error: {str(e)}", status=500)
 
 @csrf_exempt
@@ -120,44 +189,115 @@ def execute_payment(request):
 def ipn_listener(request):
     """Handle PayPal IPN notifications"""
     try:
-        # Verify IPN message
-        if not paypalrestsdk.notification.webhook_event.verify(request.body):
+        # Log the raw request data
+        print("=== IPN Request Details ===")
+        print(f"Request method: {request.method}")
+        print(f"Content type: {request.content_type}")
+        
+        # Get the raw POST data
+        raw_data = request.body.decode('utf-8')
+        
+        # Add cmd=_notify-validate to the beginning of the data
+        verify_data = 'cmd=_notify-validate&' + raw_data
+        
+        # Send verification request to PayPal
+        headers = {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': 'Python-IPN-VerificationScript'
+        }
+        
+        # Use sandbox URL for testing, live URL for production
+        verify_url = 'https://ipnpb.sandbox.paypal.com/cgi-bin/webscr' if settings.PAYPAL_MODE == 'sandbox' else 'https://ipnpb.paypal.com/cgi-bin/webscr'
+        
+        import requests
+        response = requests.post(verify_url, data=verify_data, headers=headers)
+        
+        if response.text != 'VERIFIED':
+            print("IPN verification failed")
             return HttpResponse("Invalid IPN", status=400)
 
         # Parse IPN data
-        ipn_data = json.loads(request.body)
+        try:
+            ipn_data = dict(item.split("=") for item in raw_data.split("&"))
+        except Exception as e:
+            print(f"Error parsing IPN data: {str(e)}")
+            return HttpResponse("Invalid IPN data format", status=400)
         
-        # Find payment by transaction ID
-        payment = Payment.objects.get(payment_id=ipn_data.get('txn_id'))
-        
-        # Update payment status based on IPN
-        if ipn_data.get('payment_status') == 'Completed':
-            payment.status = 'completed'
-        elif ipn_data.get('payment_status') == 'Refunded':
-            payment.status = 'refunded'
-        elif ipn_data.get('payment_status') == 'Failed':
-            payment.status = 'failed'
+        # Get transaction ID from either txn_id or parent_txn_id
+        transaction_id = ipn_data.get('txn_id') or ipn_data.get('parent_txn_id')
+        if not transaction_id:
+            print("No transaction ID found in IPN data")
+            return HttpResponse("No transaction ID", status=400)
             
-        # Store IPN data
-        payment.ipn_data = ipn_data
-        payment.save()
-        
-        return HttpResponse("IPN processed", status=200)
-    except Payment.DoesNotExist:
-        return HttpResponse("Payment not found", status=404)
+        # Find payment by transaction ID
+        try:
+            payment = Payment.objects.get(payment_id=transaction_id)
+            
+            # Only process if payment status has changed
+            payment_status = ipn_data.get('payment_status')
+            if payment_status != payment.status:
+                print(f"Updating payment status from {payment.status} to {payment_status}")
+                
+                if payment_status == 'Completed':
+                    payment.status = 'completed'
+                    # Update user's premium status if payment is successful
+                    if payment.user:
+                        try:
+                            from user_management.services import activate_premium
+                            result = activate_premium(payment.user.email)
+                            print(f"Premium activation result: {result}")
+                        except Exception as e:
+                            print(f"Error activating premium: {str(e)}")
+                elif payment_status == 'Refunded':
+                    payment.status = 'refunded'
+                elif payment_status == 'Failed':
+                    payment.status = 'failed'
+                    
+                # Store IPN data
+                payment.ipn_data = ipn_data
+                payment.save()
+                print(f"Payment {transaction_id} updated to {payment_status}")
+            else:
+                print(f"Payment {transaction_id} already in {payment_status} state - skipping update")
+            
+            return HttpResponse("IPN processed", status=200)
+        except Payment.DoesNotExist:
+            print(f"Payment not found for IPN txn_id: {transaction_id}")
+            return HttpResponse("Payment not found", status=404)
+            
     except Exception as e:
+        print(f"Error processing IPN: {str(e)}")
         return HttpResponse(f"Error: {str(e)}", status=500)
 
-@login_required
-def cancel_payment(request):
-    """Handle payment cancellation"""
-    payment_id = request.GET.get('paymentId')
-    try:
-        payment = Payment.objects.get(payment_id=payment_id, user=request.user)
-        payment.status = 'failed'
-        payment.save()
-        return redirect('/payment/cancelled/')
-    except Payment.DoesNotExist:
-        return HttpResponse("Payment not found", status=404)
-    except Exception as e:
-        return HttpResponse(f"Error: {str(e)}", status=500)
+def payment_success(request):
+    """Handle successful payment"""
+    html = f"""
+    <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
+        <h1 style="color: #28a745;">Payment Successful!</h1>
+        <p style="font-size: 18px; margin: 20px 0;">Thank you for your payment. Your premium subscription has been activated.</p>
+        <a href="{settings.FRONTEND_URL}/home" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; margin-top: 20px;">Return to Home</a>
+    </div>
+    """
+    return HttpResponse(html)
+
+def payment_failed(request):
+    """Handle failed payment"""
+    html = f"""
+    <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
+        <h1 style="color: #dc3545;">Payment Failed</h1>
+        <p style="font-size: 18px; margin: 20px 0;">We're sorry, but your payment could not be processed. Please try again.</p>
+        <a href="{settings.FRONTEND_URL}/home" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; margin-top: 20px;">Return to Home</a>
+    </div>
+    """
+    return HttpResponse(html)
+
+def payment_cancelled(request):
+    """Handle cancelled payment"""
+    html = f"""
+    <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
+        <h1 style="color: #ffc107;">Payment Cancelled</h1>
+        <p style="font-size: 18px; margin: 20px 0;">Your payment was cancelled. You can try again whenever you're ready.</p>
+        <a href="{settings.FRONTEND_URL}/home" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; margin-top: 20px;">Return to Home</a>
+    </div>
+    """
+    return HttpResponse(html)

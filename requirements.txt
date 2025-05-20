@@ -37,7 +37,10 @@ mutagen
 vite
 
 daphne
-sqlparse==0.2.4 channels-redis redis
+sqlparse==0.2.4
+channels-redis
+redis
+
 paypalrestsdk
 #npm install ngrok
 #sudo snap install ngrok
